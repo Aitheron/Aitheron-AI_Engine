@@ -6,6 +6,23 @@ Este projeto aplica técnicas de Inteligência Artificial à análise de variant
 
 </div>
 
+## Amostragem dos dados
+
+| VariationID | GeneSymbol | ClinicalSignificance | ClinSigSimple | Type                       | Origin           | Assembly | Chromosome |   Start   |   Stop    |
+|-------------|------------|----------------------|---------------|----------------------------|-----------------|----------|------------|-----------|-----------|
+| 209219      | BRCA1      | Benign               | 0             | single nucleotide variant  | germline        | GRCh38   | 17         | 43039471  | 43039471  |
+| 55602       | BRCA1      | Pathogenic           | 1             | Deletion                   | germline        | GRCh38   | 17         | 43045706  | 43045767  |
+| 209597      | BRCA2      | Benign               | 0             | single nucleotide variant  | germline        | GRCh38   | 13         | 32314943  | 32314943  |
+| 51579       | BRCA2      | Pathogenic           | 1             | single nucleotide variant  | germline;unknown| GRCh38   | 13         | 32316463  | 32316463  |
+
+---
+
+## Distribuição das variantes por classificação clínica — BRCA1 e BRCA2
+
+![Gráfico de Distribuição das variantes por classificação clinica](./images/classifications_brca_bars.png)
+
+---
+
 ## Tipo e quantidade de mutações por gene - BRCA1 e BRCA2
 
-![Gráfico de Barras](./images/mutations_brca_barras.png)
+![Tipo e quantidade de mutações por gene](./images/mutation_types_brca_bars.png)
