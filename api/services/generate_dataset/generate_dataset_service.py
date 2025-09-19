@@ -1,9 +1,9 @@
 import pandas as pd
 from pathlib import Path
 
-from api.services.settings import OUTDIR, VALID_CONFIDENCE_NCBI
-from api.services.generate_dataset.data_process.utils.validations import is_ready_file
-from api.services.generate_dataset.data_process import (
+from services.settings import OUTDIR, VALID_CONFIDENCE_NCBI
+from services.generate_dataset.data_process.utils.validations import is_ready_file
+from services.generate_dataset.data_process import (
     download_ncbi_gene_summary,
     clean_data_per_submit_confidence,
     update_df_inplace_with_vep,
@@ -30,7 +30,7 @@ def run_generate_dataset_service(
                 input_files=[initial_df_path],
                 valid_confidence=VALID_CONFIDENCE_NCBI
             )
-        cleaned_df = pd.read_csv(cleaned_df_path)
+        cleaned_df = pd.read_csv(cleaned_df_path, sep="\t", dtype=str)
 
         with_alleles_df_path = f'{OUTDIR}/clinvar_{gene}_GRCh38_with_alleles_and_proteins.csv'
         if force or not is_ready_file(with_alleles_df_path):
@@ -67,8 +67,8 @@ def run_generate_dataset_service(
         dfs = []
         for g, p in zip(genes, csv_paths):
             df = pd.read_csv(p)
-            if "GENE" not in df.columns:
-                df["GENE"] = g
+            if "GeneSymbol" not in df.columns:
+                df["GeneSymbol"] = g
             dfs.append(df)
 
         merged_df = pd.concat(dfs, ignore_index=True)

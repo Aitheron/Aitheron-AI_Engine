@@ -1,7 +1,7 @@
 import os, gzip, requests
 import pandas as pd
 
-from api.services.settings import (
+from services.settings import (
     OUTDIR,
     CLINVAR_TAB_URL
 )

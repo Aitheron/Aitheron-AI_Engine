@@ -8,25 +8,18 @@ class GeneSelection(str, Enum):
     BOTH  = "BOTH"
 
 def resolve_api_base_url(default: str = "http://localhost:8000") -> str:
-    """Safe resolver for API base URL without crashing when secrets.toml is absent."""
-    # 1) env var wins
     env_val = os.getenv("API_BASE_URL")
     if env_val:
         return env_val.rstrip("/")
-
-    # 2) try Streamlit secrets (if present)
     try:
-        # late import to avoid hard dependency at import time
-        import streamlit as st  # type: ignore
+        import streamlit as st
         try:
-            api_val = st.secrets["API_BASE_URL"]  # will raise if no secrets file
+            api_val = st.secrets["API_BASE_URL"]
             return str(api_val).rstrip("/")
         except Exception:
             pass
     except Exception:
         pass
-
-    # 3) default
     return default.rstrip("/")
 
 class APIClient:
@@ -35,7 +28,14 @@ class APIClient:
 
     def download_dataset_bytes(self, gene: GeneSelection, force: bool = False) -> bytes:
         url = f"{self.base_url}/api/datasets/download"
-        params = {"gene": gene.value, "force": str(force).lower()}
-        r = requests.get(url, params=params, timeout=60)
+
+        if gene is GeneSelection.BOTH:
+            payload = {"genes": ["BRCA1", "BRCA2"], "force": force, "both": True}
+        else:
+            payload = {"genes": [gene.value], "force": force, "both": False}
+
+        print("payload ->", payload)
+
+        r = requests.post(url, json=payload, timeout=120)
         r.raise_for_status()
         return r.content

@@ -38,12 +38,10 @@ with right:
 
 st.divider()
 
-# Session state para armazenar o resultado
 if "download_bytes" not in st.session_state:
     st.session_state.download_bytes = None
     st.session_state.download_name = None
 
-# Ação
 cta_col, dl_col = st.columns([1, 2])
 with cta_col:
     if st.button("⬇️ Preparar download"):
@@ -52,9 +50,9 @@ with cta_col:
             try:
                 data = client.download_dataset_bytes(gene_option, force=force_rebuild)
                 filename = {
-                    GeneSelection.BRCA1: "dataset_BRCA1.tsv",
-                    GeneSelection.BRCA2: "dataset_BRCA2.tsv",
-                    GeneSelection.BOTH:  "dataset_BRCA1_BRCA2.tsv",
+                    GeneSelection.BRCA1: "dataset_BRCA1.xlsx",
+                    GeneSelection.BRCA2: "dataset_BRCA2.xlsx",
+                    GeneSelection.BOTH:  "dataset_BRCA1_BRCA2.xlsx",
                 }[gene_option]
                 st.session_state.download_bytes = data
                 st.session_state.download_name = filename
