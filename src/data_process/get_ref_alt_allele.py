@@ -23,7 +23,7 @@ def normalize_rs(value) -> str | None:
     return f"rs{base}"
 
 def _has_protein_fields(t: dict) -> bool:
-    return any(t.get(k) is not None for k in ("protein_start", "protein_end", "amino_acids", "hgvsp"))
+    return any(t.get(k) is not None for k in ("protein_start", "protein_end", "amino_acids"))
 
 def _impact_rank(val: str | None) -> int:
     order = {"HIGH": 4, "MODERATE": 3, "LOW": 2, "MODIFIER": 1}
@@ -185,8 +185,6 @@ def process_item(args):
         "Codons": pd.NA,
         "AminoAcids": pd.NA,
         "Strand": pd.NA,
-        "HGVSc": pd.NA,
-        "HGVSp": pd.NA,
         "FASTA_CDS": pd.NA,
         "FASTA_Protein": pd.NA,
     }
@@ -232,9 +230,7 @@ def process_item(args):
         "CDSEnd": chosen.get("cds_end") if chosen.get("cds_end") is not None else pd.NA,
         "Codons": chosen.get("codons") or pd.NA,
         "AminoAcids": chosen.get("amino_acids") or pd.NA,
-        "Strand": chosen.get("strand") if chosen.get("strand") is not None else pd.NA,
-        "HGVSc": chosen.get("hgvsc") or pd.NA,
-        "HGVSp": chosen.get("hgvsp") or pd.NA,
+        "Strand": chosen.get("strand") if chosen.get("strand") is not None else pd.NA
     })
 
     if enst:
@@ -282,7 +278,7 @@ def update_df_inplace_with_vep(
         "IsCoding", "TranscriptSelectionBasis", "ENST", "ENSP",
         "ConsequenceTerms", "Impact", "VariantAllele", "ProteinStart",
         "ProteinEnd", "CDNAStart", "CDNAEnd", "CDSStart", "CDSEnd",
-        "Codons", "AminoAcids", "Strand", "HGVSc", "HGVSp",
+        "Codons", "AminoAcids", "Strand",
         "FASTA_CDS", "FASTA_Protein",
     ]
     for column in new_cols:
