@@ -1,8 +1,11 @@
-import os, io, gzip, requests
+import os, gzip, requests
 import pandas as pd
 
-CLINVAR_TAB_URL = "https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/variant_summary.txt.gz"
-OUTDIR = "../files"
+from api.services.settings import (
+    OUTDIR,
+    CLINVAR_TAB_URL
+)
+
 os.makedirs(OUTDIR, exist_ok=True)
 
 def download_variant_summary(dst_path=f"{OUTDIR}/variant_summary.txt.gz", chunk=1<<20):
@@ -38,15 +41,15 @@ def filter_gene(df, gene="BRCA1",
     cols = [c for c in cols if c in g.columns]
     return g[cols].sort_values(["GeneSymbol","Chromosome","Start"])
 
-def main():
+def download_ncbi_gene_summary(gene):
     gz_path = download_variant_summary()
     df = load_variant_summary(gz_path)
 
-    brca1 = filter_gene(df, gene="BRCA1")
-    brca2 = filter_gene(df, gene="BRCA2")
+    gene_df = filter_gene(df, gene=gene)
 
-    brca1.to_csv(f"{OUTDIR}/clinvar_BRCA1_GRCh38.tsv", sep="\t", index=False)
-    brca2.to_csv(f"{OUTDIR}/clinvar_BRCA2_GRCh38.tsv", sep="\t", index=False)
+    gene_df.to_csv(f"{OUTDIR}/clinvar_{gene}_GRCh38.tsv", sep="\t", index=False)
+    
+    return gene_df
 
 if __name__ == "__main__":
-    main()
+    download_ncbi_gene_summary()

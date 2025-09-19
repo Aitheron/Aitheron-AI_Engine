@@ -322,7 +322,7 @@ if __name__ == "__main__":
     df_brca1 = pd.read_csv(input_files_path[0], sep="\t", dtype=str)
     df_brca1_upd = update_df_inplace_with_vep(
         df=df_brca1,
-        output_path='./files/clinvar_BRCA1_GRCh38_with_alleles_and_proteins1.csv',
+        output_path='./files/clinvar_BRCA1_GRCh38_with_alleles_and_proteins.csv',
         max_workers=20,
     )
 
