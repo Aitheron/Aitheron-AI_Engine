@@ -42,7 +42,6 @@ with right:
         "Como funciona:\n\n"
         "- Se o dataset já estiver em cache no servidor, ele é devolvido imediatamente.\n"
         "- Caso contrário, ele é gerado e armazenado para futuras requisições.\n"
-        "- Com **Forçar reconstrução**, você reprocessa antes do download."
     )
 
 if "download_bytes" not in st.session_state:
@@ -155,3 +154,81 @@ plot_gene_hotspots(st, dff, bin_bp=int(bin_bp))
 
 with st.expander("Ver amostra da tabela filtrada (primeiras 200 linhas)"):
     st.dataframe(dff.head(200))
+
+
+import streamlit as st
+
+resumo = """
+## 📊 Resumo das Análises dos Dados — BRCA1 e BRCA2
+
+A seguir, um resumo das principais observações obtidas a partir dos datasets analisados para variantes nos genes **BRCA1** e **BRCA2**:
+
+---
+
+### 🔹 Distribuição de Patogenicidade
+- A maioria das variantes em ambos os genes é **patogênica**.  
+- Entre **30% e 40%** são classificadas como **benignas ou possivelmente benignas**.  
+
+---
+
+### 🔹 Tipos de Mutação
+- **Single nucleotide variant (SNV):**  
+  - ~66% benigno/possivelmente benigno  
+  - ~33% patogênico  
+- **Deleção, duplicação, inserção e indel:**  
+  - ~100% patogênico (raros benignos).  
+
+---
+
+### 🔹 Variantes Codificantes
+- A maioria das variantes **codificantes** é patogênica.  
+- Existem alguns casos benignos, embora menos frequentes.  
+
+---
+
+### 🔹 Proteínas Principais Associadas
+- **BRCA1 → P38398**  
+- **BRCA2 → P51587**  
+- Cada gene concentra a maior parte das mutações em sua proteína principal.  
+
+---
+
+### 🔹 Hotspots por Proteína
+- BRCA1 → maior concentração em **BIN = 600** (intervalo de posições analisadas em blocos de 50).  
+- BRCA2 → maior concentração em **BIN = 1700**.  
+
+---
+
+### 🔹 Hotspots por Posição no Gene
+- **BRCA1:** principais mutações patogênicas em torno da posição **43,09–43,10 milhões**.  
+- **BRCA2:** principais mutações patogênicas em torno da posição **32,33–32,34 milhões**.  
+
+---
+
+### 🔹 Frequência por Alelos
+- **Deleções e duplicações:** ~99% patogênicas.  
+- **Substituições de base (C → A/G/T):** distribuição próxima de 50% patogênico / 50% benigno ou possivelmente benigno.  
+
+---
+
+### 🔹 Consequências Codificantes
+- **frameshift_variant:** 100% patogênico.  
+- **stop_gained:** ~90% patogênico.  
+- **missense_variant:** maioria benigna ou possivelmente benigna.  
+
+---
+
+### 🔹 Impacto Clínico
+- **Alto impacto:** predominantemente patogênico.  
+- **Moderado impacto:** majoritariamente benigno ou possivelmente benigno.  
+- **Baixo impacto:** em sua maioria possivelmente benigno.  
+
+---
+
+✅ **Observação:**  
+- O termo **BIN** representa **intervalos de posições na proteína** (ex.: BIN = 600 significa o bloco que cobre posições em torno de 600, em janelas de 50 aminoácidos).  
+- As posições genômicas como **43,09** e **32,33** estão em **milhões de pares de base (bp)**, indicando regiões específicas dentro do gene com maior densidade de mutações patogênicas.  
+
+"""
+
+st.markdown(resumo, unsafe_allow_html=True)
