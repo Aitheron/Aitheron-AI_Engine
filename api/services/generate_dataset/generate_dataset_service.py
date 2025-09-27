@@ -17,6 +17,20 @@ def run_generate_dataset_service(
     both: bool = False
 ):
     out_paths = {}
+
+    merged_excel_path = f'{OUTDIR}/clinvar_BRCA1_BRCA2_GRCh38_merged.xlsx'
+    if both and not force and is_ready_file(merged_excel_path):
+        out_paths = {
+            gene: {
+                "initial": f"{OUTDIR}/clinvar_{gene}_GRCh38.tsv",
+                "cleaned": f"{OUTDIR}/clinvar_{gene}_GRCh38_filtered.tsv",
+                "with_alleles": f"{OUTDIR}/clinvar_{gene}_GRCh38_with_alleles_and_proteins.csv",
+                "with_uniprot": f"{OUTDIR}/clinvar_{gene}_GRCh38_with_uniprot.csv",
+            }
+            for gene in genes
+        }
+        return {"by_gene": out_paths, "merged_excel": merged_excel_path}
+    
     for gene in genes:
         initial_df_path = f'{OUTDIR}/clinvar_{gene}_GRCh38.tsv'
         if force or not is_ready_file(initial_df_path):

@@ -36,6 +36,6 @@ class APIClient:
 
         print("payload ->", payload)
 
-        r = requests.post(url, json=payload, timeout=120)
+        r = requests.post(url, json=payload, timeout=3600)
         r.raise_for_status()
         return r.content
