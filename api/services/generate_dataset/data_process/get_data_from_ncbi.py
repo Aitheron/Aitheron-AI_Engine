@@ -37,7 +37,7 @@ def filter_gene(df, gene="BRCA1",
         g = g[g["Type"].str.lower().isin(vt)]
     cols = ["VariationID","AlleleID","GeneSymbol","ClinicalSignificance","ClinSigSimple",
             "Type","Origin","OriginSimple","Assembly","Chromosome","Start","Stop",
-            "ReferenceAllele","AlternateAllele","ReviewStatus","RCVaccession","RS# (dbSNP)"]
+            "ReferenceAllele","AlternateAllele","ReviewStatus","RCVaccession","RS# (dbSNP)", "Strand"]
     cols = [c for c in cols if c in g.columns]
     return g[cols].sort_values(["GeneSymbol","Chromosome","Start"])
 
