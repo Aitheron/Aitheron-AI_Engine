@@ -18,8 +18,6 @@ DB_ALIAS = {
     "Ensembl": "Ensembl",
 }
 
-# --- Helpers (ID mapping UniProt) ---
-
 @retry(stop=stop_after_attempt(5), wait=wait_exponential(min=1, max=20))
 def run_uniprot_id_mapping(from_db: str, to_db: str, ids: list[str]) -> str:
 
@@ -104,7 +102,6 @@ def _map_chunk_ids_to_uniprot(from_db: str, ids: list[str], restrict_taxon: int 
 
     job_id = run_uniprot_id_mapping(from_db, "UniProtKB", ids)
 
-    # Poll simples
     while True:
         status = poll_uniprot_job(job_id)
         js = status.get("jobStatus")
@@ -116,7 +113,6 @@ def _map_chunk_ids_to_uniprot(from_db: str, ids: list[str], restrict_taxon: int 
 
     raw_results = fetch_uniprot_id_mapping_results(job_id)
 
-    # Agrupar por fonte com normalização do 'to'
     grouped: dict[str, list[dict]] = {}
     for item in raw_results:
         src = item.get("from")
@@ -139,7 +135,6 @@ def map_ids_to_uniprot(from_db: str, ids: list[str], restrict_taxon: int | None 
     if not clean_ids:
         return {}
 
-    # Remover duplicatas mantendo ordem relativamente estável
     seen = set()
     unique_ids = []
     for i in clean_ids:
@@ -154,8 +149,6 @@ def map_ids_to_uniprot(from_db: str, ids: list[str], restrict_taxon: int | None 
         out.update(mapped)
 
     return out
-
-# --- Fetch de detalhes UniProt por accession ---
 
 @retry(stop=stop_after_attempt(5), wait=wait_exponential(min=1, max=20))
 def fetch_uniprot_entry_json(accession: str) -> dict | None:
@@ -173,7 +166,6 @@ def extract_name_function_features(entry: dict):
     except Exception:
         protein_description = entry.get("uniProtkbId") or pd.NA
 
-    # Função (comments FUNCTION)
     function_texts = []
     for c in entry.get("comments", []):
         if c.get("commentType") == "FUNCTION":
@@ -183,7 +175,6 @@ def extract_name_function_features(entry: dict):
                     function_texts.append(v)
     protein_function = " | ".join(function_texts) if function_texts else pd.NA
 
-    # Features/Domínios (resumo breve)
     feature_summaries = []
     for f in entry.get("features", []):
         ftype = f.get("type")
@@ -218,8 +209,6 @@ def fetch_details_for_accessions(accessions: list[str], max_workers: int = 20) -
                 results[acc] = info
     return results
 
-# --- Pipeline principal ---
-
 def enrich_with_uniprot(df: pd.DataFrame, output_path: str | None = None, ensp_col: str = "ENSP", enst_col: str = "ENST", max_workers: int = 20) -> pd.DataFrame:
     df_out = df.copy()
 
@@ -238,12 +227,9 @@ def enrich_with_uniprot(df: pd.DataFrame, output_path: str | None = None, ensp_c
     unique_ensps = sorted({v for v in ensp_values if v})
     unique_ensts = sorted({v for v in enst_values if v})
 
-    # mapeamento ENSP -> UniProt (usar nomes corretos)
     ensp_to_uniprot = map_ids_to_uniprot("Ensembl_Protein", unique_ensps) if unique_ensps else {}
-    # mapeamento ENST -> UniProt (fallback)
     enst_to_uniprot = map_ids_to_uniprot("Ensembl_Transcript", unique_ensts) if unique_ensts else {}
 
-    # montar lista de accessions necessários
     row_to_accession: dict[int, str] = {}
     for idx, row in df_out.iterrows():
         accession = None
@@ -258,11 +244,9 @@ def enrich_with_uniprot(df: pd.DataFrame, output_path: str | None = None, ensp_c
         if accession:
             row_to_accession[idx] = accession
 
-    # baixar detalhes UniProt em paralelo
     accession_list = list(row_to_accession.values())
     accession_details = fetch_details_for_accessions(accession_list, max_workers=max_workers)
 
-    # escrever no DF sem chained assignment
     name_series = {}
     func_series = {}
     feat_series = {}
@@ -294,7 +278,6 @@ if __name__ == "__main__":
     input_path = "./files/clinvar_BRCA1_GRCh38_with_alleles_and_proteins1.csv"
     df_in = pd.read_csv(input_path, dtype=str)
 
-    # Enriquecer com nome, função e features/domínios a partir do UniProt
     df_out = enrich_with_uniprot(
         df_in,
         output_path="./files/clinvar_BRCA1_GRCh38_with_uniprot.csv",

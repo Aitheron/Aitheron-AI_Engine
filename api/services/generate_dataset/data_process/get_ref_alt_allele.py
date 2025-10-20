@@ -289,7 +289,6 @@ def update_df_inplace_with_vep(
 
     allele_results = {}
     enrich_by_idx: dict[int, dict] = {}
-    print("AAAAAAAAAAAAAAAAAA")
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [executor.submit(process_item, task) for task in tasks]
         for fut in as_completed(futures):

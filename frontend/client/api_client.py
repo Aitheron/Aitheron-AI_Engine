@@ -34,8 +34,6 @@ class APIClient:
         else:
             payload = {"genes": [gene.value], "force": force, "both": False}
 
-        print("payload ->", payload)
-
         r = requests.post(url, json=payload, timeout=3600)
         r.raise_for_status()
         return r.content

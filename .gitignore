@@ -3,3 +3,5 @@ filess
 __pycache__/
 
 *.json
+*.ipynb
+*.txt

@@ -34,12 +34,10 @@ def run_generate_dataset_service(
     for gene in genes:
         initial_df_path = f'{OUTDIR}/clinvar_{gene}_GRCh38.tsv'
         if force or not is_ready_file(initial_df_path):
-            print("Entrou no if")
             download_ncbi_gene_summary(gene=gene)
 
         cleaned_df_path = f'{OUTDIR}/clinvar_{gene}_GRCh38_filtered.tsv'
         if force or not is_ready_file(cleaned_df_path):
-            print("Entrou no if")
             cleaned_df_path = clean_data_per_submit_confidence(
                 input_files=[initial_df_path],
                 valid_confidence=VALID_CONFIDENCE_NCBI
@@ -48,7 +46,6 @@ def run_generate_dataset_service(
 
         with_alleles_df_path = f'{OUTDIR}/clinvar_{gene}_GRCh38_with_alleles_and_proteins.csv'
         if force or not is_ready_file(with_alleles_df_path):
-            print("Entrou no if")
             with_alleles_df = update_df_inplace_with_vep(
                 df=cleaned_df,
                 output_path=with_alleles_df_path,
@@ -59,7 +56,6 @@ def run_generate_dataset_service(
 
         enriched_uniprot_df_path = f'{OUTDIR}/clinvar_{gene}_GRCh38_with_uniprot.csv'
         if force or not is_ready_file(enriched_uniprot_df_path):
-            print("Entrou no if")
             enrich_with_uniprot(
                 with_alleles_df,
                 output_path=enriched_uniprot_df_path,
