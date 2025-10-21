@@ -1,8 +1,8 @@
 from pathlib import Path
 import re
 
-input = Path("pacient.txt")      # ajuste o nome
-output = Path("SEU_ARQUIVO.fasta")
+input = Path("patient.txt")      # ajuste o nome
+output = Path("patient.fasta")
 raw = input.read_text().strip()
 
 # mantém apenas letras ACGTURYKMSWBDHVN (qualquer case); remove espaços/números
