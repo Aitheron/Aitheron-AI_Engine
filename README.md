@@ -67,3 +67,4 @@ Além da **LGPD**, existe alguma legislação, regulamentação ou normativa esp
 
 - Uniprot (BRCA1 - Human) : https://www.uniprot.org/uniprotkb?query=%28gene%3ABRCA1%29&facets=model_organism%3A9606
 - Proteina P38398-5 para o id(ENST00000352993) -> https://www.uniprot.org/uniprotkb/P38398/genomic-coordinates
+- Arquivo Patient.fasta é um arquivo alterado na mão para teste de detecção de variantes

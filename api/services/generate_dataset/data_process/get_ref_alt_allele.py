@@ -6,7 +6,6 @@ from tenacity import retry, wait_exponential, stop_after_attempt
 ENSEMBL_VEP_ID_URL = "https://rest.ensembl.org/vep/human/id/{rsid}"
 ENSEMBL_LOOKUP_ENST_URL = "https://rest.ensembl.org/lookup/id/{enst}?expand=1"
 ENSEMBL_SEQUENCE_ID_URL = "https://rest.ensembl.org/sequence/id/{item_id}?type={seqtype}"
-
 HEADERS_JSON = {"Accept": "application/json"}
 HEADERS_FASTA = {"Accept": "text/x-fasta"}
 
@@ -30,11 +29,8 @@ def _impact_rank(val: str | None) -> int:
     return order.get((val or "").upper(), 0)
 
 def _choose_transcript(transcripts: list[dict]) -> tuple[dict | None, str]:
-
     if not transcripts:
         return None, "fallback"
-
-    # 1) protein_fields
     with_protein = [t for t in transcripts if _has_protein_fields(t)]
     if with_protein:
         candidates = with_protein
@@ -42,32 +38,33 @@ def _choose_transcript(transcripts: list[dict]) -> tuple[dict | None, str]:
     else:
         candidates = transcripts
         basis = None
-
-    # 2) impact
     max_imp = max((_impact_rank(t.get("impact")) for t in candidates), default=0)
     by_impact = [t for t in candidates if _impact_rank(t.get("impact")) == max_imp]
     if len(by_impact) == 1:
         return by_impact[0], (basis or "impact")
-
-    # 3) menor distance
     with_dist = [t for t in by_impact if isinstance(t.get("distance"), int)]
     if with_dist:
         chosen = min(with_dist, key=lambda x: x.get("distance", 10**9))
         return chosen, (basis or "distance")
-
-    # 4) fallback
     return by_impact[0], (basis or "fallback")
 
 NONCODING_UPDOWN_TERMS = {"upstream_gene_variant", "downstream_gene_variant"}
 CODING_TERMS = {
-    "missense_variant", "synonymous_variant", "stop_gained", "stop_lost",
-    "frameshift_variant", "inframe_insertion", "inframe_deletion",
-    "start_lost", "protein_altering_variant",
-    "splice_acceptor_variant", "splice_donor_variant", "splice_region_variant",
+    "missense_variant",
+    "synonymous_variant",
+    "stop_gained",
+    "stop_lost",
+    "frameshift_variant",
+    "inframe_insertion",
+    "inframe_deletion",
+    "start_lost",
+    "protein_altering_variant",
+    "splice_acceptor_variant",
+    "splice_donor_variant",
+    "splice_region_variant",
 }
 
 def _is_updown_with_distance(t: dict) -> bool:
-
     terms = {s.lower() for s in (t.get("consequence_terms") or [])}
     if not terms:
         return False
@@ -76,7 +73,6 @@ def _is_updown_with_distance(t: dict) -> bool:
     return only_updown and has_distance
 
 def _is_coding_tc(t: dict) -> bool:
-    """True se o item tem evidência de efeito codificante."""
     terms = {s.lower() for s in (t.get("consequence_terms") or [])}
     if terms & CODING_TERMS:
         return True
@@ -102,7 +98,6 @@ def fetch_vep_record(rsid: str, session: requests.Session, timeout=30) -> dict |
 
 @retry(stop=stop_after_attempt(10), wait=wait_exponential(min=1, max=30))
 def fetch_translation_id_for_enst(enst: str, session: requests.Session, timeout=30) -> str | None:
-
     url = ENSEMBL_LOOKUP_ENST_URL.format(enst=enst)
     r = session.get(url, headers=HEADERS_JSON, timeout=timeout)
     if r.status_code != 200:
@@ -115,7 +110,6 @@ def fetch_translation_id_for_enst(enst: str, session: requests.Session, timeout=
 
 @retry(stop=stop_after_attempt(10), wait=wait_exponential(min=1, max=30))
 def fetch_fasta(item_id: str, seqtype: str, session: requests.Session, timeout=30) -> str | None:
-
     if not item_id:
         return None
     url = ENSEMBL_SEQUENCE_ID_URL.format(item_id=item_id, seqtype=seqtype)
@@ -128,7 +122,6 @@ def fetch_fasta(item_id: str, seqtype: str, session: requests.Session, timeout=3
     return text
 
 def extract_ref_alt_from_rec(rec: dict, rsid: str) -> tuple[str | None, str | None]:
-
     allele_string = rec.get("allele_string")
     if not allele_string:
         coloc = rec.get("colocated_variants") or []
@@ -138,36 +131,26 @@ def extract_ref_alt_from_rec(rec: dict, rsid: str) -> tuple[str | None, str | No
                 break
         if not allele_string and coloc:
             allele_string = coloc[0].get("allele_string")
-
     if not allele_string or "/" not in allele_string:
         return None, None
-
     parts = allele_string.split("/")
     if len(parts) < 2:
         return None, None
-
     ref = parts[0]
     alts_str = ",".join(parts[1:])
     return ref, alts_str
 
 def process_item(args):
     idx, raw_val, session = args
-
     rsid = normalize_rs(raw_val)
     if not rsid:
         return idx, None, None, {}
-
     rec = fetch_vep_record(rsid, session)
-
     ref, alts = extract_ref_alt_from_rec(rec, rsid)
-
     tcs = rec.get("transcript_consequences") or []
     pc = [t for t in tcs if (t.get("biotype") == "protein_coding")]
-
-    # Split: remover itens que são SÓ upstream/downstream com distance
     pc_non_updown = [t for t in pc if not _is_updown_with_distance(t)]
-    pc_updown     = [t for t in pc if _is_updown_with_distance(t)]
-
+    pc_updown = [t for t in pc if _is_updown_with_distance(t)]
     enrich = {
         "IsCoding": False,
         "TranscriptSelectionBasis": pd.NA,
@@ -188,11 +171,9 @@ def process_item(args):
         "FASTA_CDS": pd.NA,
         "FASTA_Protein": pd.NA,
     }
-
     chosen = None
     basis = "fallback"
     coding = False
-
     if pc_non_updown:
         chosen, basis = _choose_transcript(pc_non_updown)
         coding = bool(chosen and _is_coding_tc(chosen))
@@ -201,19 +182,18 @@ def process_item(args):
         basis = "non_coding_up/down_with_distance"
         coding = False
     else:
-        # sem protein_coding — mantém não-codificante
         return idx, ref, alts, enrich
-
-    # Se não-codificante: só marque o basis e retorne (demais colunas vazias)
     if not coding:
         enrich["IsCoding"] = False
         enrich["TranscriptSelectionBasis"] = basis
+        if chosen:
+            terms = "|".join(chosen.get("consequence_terms", [])) or pd.NA
+            impact = chosen.get("impact") or "MODIFIER"
+            enrich["ConsequenceTerms"] = terms
+            enrich["Impact"] = impact
         return idx, ref, alts, enrich
-
-    # Codificante: preencher campos e buscar ENSP/FASTA
     enst = chosen.get("transcript_id")
     ensp = chosen.get("protein_id")
-
     enrich.update({
         "IsCoding": True,
         "TranscriptSelectionBasis": basis,
@@ -232,13 +212,12 @@ def process_item(args):
         "AminoAcids": chosen.get("amino_acids") or pd.NA,
         "Strand": chosen.get("strand") if chosen.get("strand") is not None else pd.NA
     })
-
     if enst:
         try:
             if not ensp:
                 ensp = fetch_translation_id_for_enst(enst, session)
-                if ensp:
-                    enrich["ENSP"] = ensp
+            if ensp:
+                enrich["ENSP"] = ensp
         except Exception:
             pass
         try:
@@ -247,7 +226,6 @@ def process_item(args):
                 enrich["FASTA_CDS"] = fasta_cds
         except Exception:
             pass
-
     if ensp:
         try:
             fasta_prot = fetch_fasta(ensp, "protein", session)
@@ -255,7 +233,6 @@ def process_item(args):
                 enrich["FASTA_Protein"] = fasta_prot
         except Exception:
             pass
-
     return idx, ref, alts, enrich
 
 def update_df_inplace_with_vep(
@@ -268,25 +245,34 @@ def update_df_inplace_with_vep(
 ):
     df_out = df.copy()
     session = requests.Session()
-
     if ref_col not in df_out.columns:
         df_out[ref_col] = pd.NA
     if alt_col not in df_out.columns:
         df_out[alt_col] = pd.NA
-
     new_cols = [
-        "IsCoding", "TranscriptSelectionBasis", "ENST", "ENSP",
-        "ConsequenceTerms", "Impact", "VariantAllele", "ProteinStart",
-        "ProteinEnd", "CDNAStart", "CDNAEnd", "CDSStart", "CDSEnd",
-        "Codons", "AminoAcids", "Strand",
-        "FASTA_CDS", "FASTA_Protein",
+        "IsCoding",
+        "TranscriptSelectionBasis",
+        "ENST",
+        "ENSP",
+        "ConsequenceTerms",
+        "Impact",
+        "VariantAllele",
+        "ProteinStart",
+        "ProteinEnd",
+        "CDNAStart",
+        "CDNAEnd",
+        "CDSStart",
+        "CDSEnd",
+        "Codons",
+        "AminoAcids",
+        "Strand",
+        "FASTA_CDS",
+        "FASTA_Protein",
     ]
     for column in new_cols:
         if column not in df_out.columns:
             df_out[column] = pd.NA
-
     tasks = [(idx, raw_val, session) for idx, raw_val in df_out[rs_col].items()]
-
     allele_results = {}
     enrich_by_idx: dict[int, dict] = {}
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -297,18 +283,15 @@ def update_df_inplace_with_vep(
                 allele_results[idx] = (ref, alts)
             if enrich:
                 enrich_by_idx[idx] = enrich
-
     if allele_results:
         ref_series = pd.Series({i: r for i, (r, _) in allele_results.items()})
         alt_series = pd.Series({i: a for i, (_, a) in allele_results.items()})
         df_out.loc[ref_series.index, ref_col] = ref_series
         df_out.loc[alt_series.index, alt_col] = alt_series
-
     for c in new_cols:
         series = pd.Series({i: d.get(c) for i, d in enrich_by_idx.items() if d.get(c) is not None})
         if not series.empty:
             df_out.loc[series.index, c] = series
-
     df_out.to_csv(output_path, index=False)
     return df_out
 
@@ -317,14 +300,12 @@ if __name__ == "__main__":
         './files/clinvar_BRCA1_GRCh38_filtered.tsv',
         './files/clinvar_BRCA2_GRCh38_filtered.tsv'
     ]
-
     df_brca1 = pd.read_csv(input_files_path[0], sep="\t", dtype=str)
     df_brca1_upd = update_df_inplace_with_vep(
         df=df_brca1,
         output_path='./files/clinvar_BRCA1_GRCh38_with_alleles_and_proteins.csv',
         max_workers=20,
     )
-
     df_brca2 = pd.read_csv(input_files_path[1], sep="\t", dtype=str)
     df_brca2_upd = update_df_inplace_with_vep(
         df=df_brca2,

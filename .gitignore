@@ -6,3 +6,5 @@ __pycache__/
 *.ipynb
 *.txt
 *.csv
+teste_mutado.fasta
+teste.fasta

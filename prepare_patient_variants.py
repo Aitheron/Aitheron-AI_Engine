@@ -2,14 +2,25 @@ import json, time
 import requests
 import pandas as pd
 
+from core.settings import IMPACT_RANK, TERM_TO_FLAG
+
 VEP_URL = "https://rest.ensembl.org/vep/human/region"
 HEADERS_JSON = {"Content-Type":"application/json","Accept":"application/json"}
-IMPACT_RANK = {"HIGH":3,"MODERATE":2,"LOW":1,"MODIFIER":0}
-CODING_TERMS = {
-    "missense_variant","synonymous_variant","stop_gained","stop_lost",
-    "start_lost","frameshift_variant","inframe_insertion","inframe_deletion",
-    "protein_altering_variant"
+
+# termos que caracterizam região codificante (para setar is_coding=1)
+CODING_SET = {
+    "missense_variant","synonymous_variant","frameshift_variant",
+    "inframe_insertion","inframe_deletion","start_lost","stop_gained","stop_lost",
+    "protein_altering_variant","coding_sequence_variant","stop_retained_variant"
 }
+
+# termos que obrigam is_coding=0 quando são os mais severos
+NONCODING_OVERRIDE = {
+    "intron_variant","upstream_gene_variant","downstream_gene_variant",
+    "5_prime_UTR_variant","3_prime_UTR_variant","regulatory_region_variant",
+    "intergenic_variant"
+}
+
 SEQ_URL_TMPL = "https://rest.ensembl.org/sequence/region/human/{chrom}:{start}..{end}:1"
 HEADERS_SEQ = {"Accept":"text/plain"}
 
@@ -29,7 +40,7 @@ def to_vcf_record(row, base_cache):
     ref=str(row["Ref"])
     alt=str(row["Alt"])
     start=int(row["Start"])
-    end=int(row["End"])
+
     if t in ("SNV","Substituição"):
         pos=start
         vref=ref
@@ -53,6 +64,7 @@ def to_vcf_record(row, base_cache):
         pos=start
         vref=ref if ref!="-" else "N"
         valt=alt if alt!="-" else "N"
+
     return chrom,vref,valt,pos
 
 def vep_call(vcf_like):
@@ -76,11 +88,29 @@ def pick_best_transcript(rec, most):
     if c4: return c4[0]
     return tcs[0] if tcs else None
 
-def derive_flags(most):
-    fs=1 if most=="frameshift_variant" else 0
-    sg=1 if most=="stop_gained" else 0
-    sc=1 if most in ("splice_acceptor_variant","splice_donor_variant") else 0
-    return fs,sg,sc
+def extract_term_flags(rec, chosen_tc):
+    # marca flags com base no transcrito escolhido; se não houver, usa união de todos
+    flags = { col: 0 for col in TERM_TO_FLAG.values() }
+    if chosen_tc and isinstance(chosen_tc.get("consequence_terms"), list):
+        observed = set(chosen_tc["consequence_terms"])
+    else:
+        observed = set()
+        for tc in rec.get("transcript_consequences", []) or []:
+            for term in tc.get("consequence_terms", []) or []:
+                if isinstance(term, str):
+                    observed.add(term)
+    for term, col in TERM_TO_FLAG.items():
+        if term in observed:
+            flags[col] = 1
+    return flags, observed
+
+def decide_is_coding(rec, most, chosen_tc, observed_terms):
+    protein_coding = bool(chosen_tc and chosen_tc.get("biotype")=="protein_coding")
+    has_coding_term = any((t in CODING_SET) for t in (observed_terms or []))
+    is_coding = 1 if (protein_coding and has_coding_term) else 0
+    if most in NONCODING_OVERRIDE:
+        is_coding = 0
+    return is_coding
 
 def enrich_with_vep_to_csv(in_csv, out_csv):
     df=pd.read_csv(in_csv)
@@ -90,20 +120,33 @@ def enrich_with_vep_to_csv(in_csv, out_csv):
         chrom,vref,valt,pos=to_vcf_record(row,base_cache)
         vcf_variants.append(f"{chrom} {pos} . {vref} {valt}")
         mapping.append(i)
+
     def batched(seq,n=200):
         for i in range(0,len(seq),n):
             yield i,seq[i:i+n]
+
     annos=[None]*len(df)
     for i0,chunk in batched(vcf_variants,200):
         resp=vep_call(chunk)
         for j,rec in enumerate(resp):
             annos[mapping[i0+j]]=rec
         time.sleep(0.15)
+
+    # garantir que colunas Is* existam mesmo se não aparecerem (preenchemos ao final)
+    is_cols = list(TERM_TO_FLAG.values())
+
     records=[]
     for i,row in df.iterrows():
         rec=annos[i] or {}
         most=rec.get("most_severe_consequence")
+
+        # escolhe o transcrito antes de extrair flags
         tc=pick_best_transcript(rec,most) if most else None
+
+        # flags Is* a partir do transcrito escolhido (fallback: união)
+        term_flags, observed_terms = extract_term_flags(rec, tc)
+
+        # impacto
         impact_str=None; impact_num=None
         if tc and tc.get("impact"):
             impact_str=tc["impact"]
@@ -113,32 +156,39 @@ def enrich_with_vep_to_csv(in_csv, out_csv):
                     impact_str=_tc["impact"]; break
         if impact_str:
             impact_num=IMPACT_RANK.get(impact_str,0)
-        coding=1 if (tc and tc.get("biotype")=="protein_coding" and any(t in CODING_TERMS for t in tc.get("consequence_terms",[]))) else 0
-        fs,sg,sc=derive_flags(most or "")
+
+        is_coding = decide_is_coding(rec, most, tc, observed_terms)
+
+        # comprimentos
         len_ref=len(str(row["Ref"]).replace("-",""))
         len_alt=len(str(row["Alt"]).replace("-",""))
         length_change=len_alt-len_ref
+
         rec_out=dict(row)
         rec_out.update({
-            "consequence_terms":most,
+            "ConsequenceTerms":most,
             "impact":impact_str,
-            "impact_num":impact_num,
-            "is_coding": coding,
-            "protein_start":tc.get("protein_start") if tc else None,
-            "protein_end":tc.get("protein_end") if tc else None,
-            "cdna_start":tc.get("cdna_start") if tc else None,
-            "cdna_end":tc.get("cdna_end") if tc else None,
-            "codons":tc.get("codons") if tc else None,
-            "transcript_id":tc.get("transcript_id") if tc else None,
+            "impact_rank":impact_num,
+            "IsCoding": is_coding,
+            "Protein_Start":tc.get("protein_start") if tc else None,
+            "Protein_End":tc.get("protein_end") if tc else None,
+            "CDNAStart":tc.get("cdna_start") if tc else None,
+            "CDNAEnd":tc.get("cdna_end") if tc else None,
+            "Codons":tc.get("codons") if tc else None,
             "len_ref":len_ref,
             "len_alt":len_alt,
             "length_change":length_change,
-            "is_frameshift":fs,
-            "is_stop_gain":sg,
-            "is_splice_core":sc
         })
+        rec_out.update(term_flags)
+
         records.append(rec_out)
+
     out=pd.DataFrame(records)
+
+    for c in is_cols:
+        if c not in out.columns:
+            out[c]=0
+
     out.to_csv(out_csv,index=False)
     return out
 
