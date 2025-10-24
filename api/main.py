@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 
-from services.generate_dataset.router import router as datasets_router
+from router import (
+    datasets_router
+)
 
 API_PREFIX = "/api"
 

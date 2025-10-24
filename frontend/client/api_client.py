@@ -26,13 +26,29 @@ class APIClient:
     def __init__(self, base_url: str | None = None):
         self.base_url = (base_url or resolve_api_base_url()).rstrip("/")
 
-    def download_dataset_bytes(self, gene: GeneSelection, force: bool = False) -> bytes:
+    def download_dataset_bytes(
+        self,
+        genes: GeneSelection,
+        force: bool = False,
+        is_training_dt: bool = False,
+        both : bool = True
+    ) -> bytes:
         url = f"{self.base_url}/api/datasets/download"
 
-        if gene is GeneSelection.BOTH:
-            payload = {"genes": ["BRCA1", "BRCA2"], "force": force, "both": True}
+        if is_training_dt:
+            payload = {
+                "genes": genes,
+                "force": force, 
+                "both": True,
+                "is_training_dt" : True
+            }
         else:
-            payload = {"genes": [gene.value], "force": force, "both": False}
+            payload = payload = {
+                "genes": genes,
+                "force": force, 
+                "both": True,
+                "is_training_dt" : False
+            }
 
         r = requests.post(url, json=payload, timeout=3600)
         r.raise_for_status()

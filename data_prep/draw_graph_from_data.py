@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from data_process.utils.iterables import read_data
+from utils.iterables import read_data
 
 def draw_data_graph_in_bars_style(
     *,

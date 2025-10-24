@@ -68,7 +68,7 @@ def _apply_term_flags(terms: set) -> dict:
             d[col] = 1
     return d
 
-def build_training_csv(input_csv: str, output_csv: str) -> pd.DataFrame:
+def build_training_dataset(input_csv: str, output_csv: str) -> pd.DataFrame:
     df = pd.read_csv(input_csv, dtype=str, keep_default_na=False)
     cols = set(df.columns)
 
@@ -129,5 +129,5 @@ def build_training_csv(input_csv: str, output_csv: str) -> pd.DataFrame:
 if __name__ == "__main__":
     inp = "./files/clinvar_BRCA1_BRCA2_GRCh38_merged.csv"
     out = "training_dataset.csv"
-    df_out = build_training_csv(inp, out)
+    df_out = build_training_dataset(inp, out)
     print(f"OK: {len(df_out):,} linhas -> {out}")

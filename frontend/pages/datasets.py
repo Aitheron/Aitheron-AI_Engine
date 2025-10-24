@@ -30,18 +30,22 @@ sidebar()
 st.subheader("Opções de download")
 
 left, right = st.columns([1, 2])
+
 with left:
-    gene_option = st.selectbox(
+    ds_option = st.selectbox(
         "Selecione o dataset",
-        options=[GeneSelection.BRCA1, GeneSelection.BRCA2, GeneSelection.BOTH],
+        options=["BRUTO", "TREINAMENTO"],
         index=0,
-        format_func=lambda x: {"BRCA1": "BRCA1", "BRCA2": "BRCA2", "BOTH": "BRCA1 + BRCA2"}[x.value],
+        format_func=lambda x: "Dataset bruto" if x == "BRUTO" else "Dataset de treinamento do modelo",
     )
+    is_training_dt = (ds_option == "TREINAMENTO")
+
 with right:
     st.info(
         "Como funciona:\n\n"
         "- Se o dataset já estiver em cache no servidor, ele é devolvido imediatamente.\n"
         "- Caso contrário, ele é gerado e armazenado para futuras requisições.\n"
+        "- Você pode baixar o **dataset bruto** ou o **dataset de treinamento do modelo**.\n"
     )
 
 if "download_bytes" not in st.session_state:
@@ -49,17 +53,26 @@ if "download_bytes" not in st.session_state:
     st.session_state.download_name = None
 
 cta_col, dl_col = st.columns([1, 2])
+
 with cta_col:
     if st.button("⬇️ Preparar download"):
         with st.spinner("Preparando o arquivo..."):
             client = APIClient(API_BASE_URL)
             try:
-                data = client.download_dataset_bytes(gene_option, force=False)
-                filename = {
-                    GeneSelection.BRCA1: "dataset_BRCA1.xlsx",
-                    GeneSelection.BRCA2: "dataset_BRCA2.xlsx",
-                    GeneSelection.BOTH:  "dataset_BRCA1_BRCA2.xlsx",
-                }[gene_option]
+                payload_genes = ["BRCA1", "BRCA2"]
+
+                data = client.download_dataset_bytes(
+                    genes=payload_genes,
+                    is_training_dt=is_training_dt,
+                    force=False
+                )
+
+                filename = (
+                    "dataset_BRCA1_BRCA2.xlsx"
+                    if not is_training_dt else
+                    "dataset_treino_BRCA1_BRCA2.xlsx"
+                )
+
                 st.session_state.download_bytes = data
                 st.session_state.download_name = filename
                 st.success("Dataset pronto para download!")

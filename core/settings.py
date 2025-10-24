@@ -1,3 +1,5 @@
+from pathlib import Path
+
 # Mapeia cada consequence_term (VEP/SO) -> coluna binária Is*
 TERM_TO_FLAG = {
     # coding / protein-level
@@ -30,3 +32,9 @@ TERM_TO_FLAG = {
 }
 
 IMPACT_RANK = {"HIGH":3,"MODERATE":2,"LOW":1,"MODIFIER":0}
+
+CLINVAR_TAB_URL = "https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/variant_summary.txt.gz"
+
+OUTDIR = Path(__file__).resolve().parents[1] / "filess"
+OUTDIR.mkdir(exist_ok=True)
+VALID_CONFIDENCE_NCBI = ["reviewed by expert panel", "practice guideline"]
