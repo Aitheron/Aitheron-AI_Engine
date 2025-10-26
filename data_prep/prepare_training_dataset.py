@@ -6,16 +6,12 @@ DROP_COLS = {
     "VariationID","ClinSigSimple","ClinicalSignificance","Origin","OriginSimple",
     "Assembly","ReviewStatus","RCVaccession","RS# (dbSNP)","TranscriptSelectionBasis",
     "ENST","ENSP","CDSStart","CDSEnd","AminoAcids","Strand","HGVSc","HGVSp",
-    "FASTA_CDS","FASTA_Protein","ProteinName","ProteinFunction","ProteinFeatures","ProteinDesc"
+    "FASTA_CDS","FASTA_Protein","ProteinName","ProteinFunction","ProteinFeatures","ProteinDesc",
+    "Impact", "ConsequenceTerms", "Type"
 }
 
-BASE_COL_ORDER = [
-    "GeneSymbol","Chromosome","Start","End",
-    "ReferenceAllele","AlternateAllele","Type",
-    "ConsequenceTerms","Impact","ImpactRank",
-    "IsCoding","Protein_Start","Protein_End",
-    "CDNAStart","CDNAEnd","Codons",
-    "len_ref","len_alt","length_change","Label"
+_TYPE_FLAG_COLS = [
+    "IsSNV", "IsDeletion", "IsDuplication", "IsInsertion", "IsIndel"
 ]
 
 def _as_str(s):
@@ -27,7 +23,7 @@ def _normalize_is_coding(val):
     if isinstance(val, (int, float)):
         return 1 if int(val) == 1 else 0
     v = str(val).strip().lower()
-    truthy = {"verdadeiro"}
+    truthy = {"verdadeiro","true","1","yes"}
     return 1 if v in truthy else 0
 
 def _parse_terms(s: str) -> set:
@@ -38,6 +34,7 @@ def _parse_terms(s: str) -> set:
 def _pick_alt_allele(is_coding: int, alt: str, variant_allele: str) -> str:
     alt = _as_str(alt)
     va = _as_str(variant_allele)
+    # em região codificante, se VariantAllele vier único, preferimos ele
     if is_coding == 1 and va and ("," not in va) and ("|" not in va):
         return va
     if not alt:
@@ -62,11 +59,27 @@ def _impact_to_rank(impact: str):
     return IMPACT_RANK.get(s, "")
 
 def _apply_term_flags(terms: set) -> dict:
+    # cria todas as Is* do TERM_TO_FLAG com 0
     d = { col: 0 for col in TERM_TO_FLAG.values() }
     for term, col in TERM_TO_FLAG.items():
         if term.lower() in terms:
             d[col] = 1
     return d
+
+def _apply_type_flags(type_value: str) -> dict:
+    flags = {c: 0 for c in _TYPE_FLAG_COLS}
+    norm = type_value.lower()
+    if norm == "single nucleotide variant":
+        flags["IsSNV"] = 1
+    elif norm == "deletion":
+        flags["IsDeletion"] = 1
+    elif norm == "duplication":
+        flags["IsDuplication"] = 1
+    elif norm == "insertion":
+        flags["IsInsertion"] = 1
+    elif norm == "indel":
+        flags["IsIndel"] = 1
+    return flags
 
 def build_training_dataset(input_csv: str, output_csv: str) -> pd.DataFrame:
     df = pd.read_csv(input_csv, dtype=str, keep_default_na=False)
@@ -86,42 +99,54 @@ def build_training_dataset(input_csv: str, output_csv: str) -> pd.DataFrame:
             df[c] = ""
 
     df["IsCoding"] = df["IsCoding"].apply(_normalize_is_coding)
+
+    # escolhe ALT único
     df["AlternateAllele"] = [
-        _pick_alt_allele(ic, alt, va)
-        for ic, alt, va in zip(df["IsCoding"], df["AlternateAllele"], df["VariantAllele"])
+        _pick_alt_allele(is_coding, alt, variant_allele)
+        for is_coding, alt, variant_allele in zip(df["IsCoding"], df["AlternateAllele"], df["VariantAllele"])
     ]
 
+    # comprimentos
     df["len_ref"] = df["ReferenceAllele"].apply(_len_allele)
     df["len_alt"] = df["AlternateAllele"].apply(_len_allele)
     df["length_change"] = df["len_alt"] - df["len_ref"]
 
+    # rótulo binário
     df["Label"] = df["ClinicalSignificance"].apply(_map_label)
 
+    # impacto -> rank numérico
     df["ImpactRank"] = df["Impact"].apply(_impact_to_rank)
 
+    # flags de consequence terms
     term_sets = df["ConsequenceTerms"].apply(_parse_terms)
     flag_rows = term_sets.apply(_apply_term_flags).tolist()
     flags_df = pd.DataFrame(flag_rows)
-    for c in flags_df.columns:
-        df[c] = flags_df[c].astype(int)
+    for col_name in flags_df.columns:
+        df[col_name] = flags_df[col_name].astype(int)
 
+    # flags de Type (hotspots do tipo)
+    type_flags_rows = df["Type"].apply(_apply_type_flags).tolist()
+    type_flags_df = pd.DataFrame(type_flags_rows)
+    for col_name in _TYPE_FLAG_COLS:
+        if col_name not in type_flags_df.columns:
+            type_flags_df[col_name] = 0
+    for col_name in _TYPE_FLAG_COLS:
+        df[col_name] = type_flags_df[col_name].astype(int)
+
+    # drop de colunas
     to_drop: Iterable[str] = [c for c in DROP_COLS if c in df.columns]
     if to_drop:
         df = df.drop(columns=to_drop)
 
-    numeric_can_be_blank = ["Start","End","Protein_Start","Protein_End","CDNAStart","CDNAEnd"]
-    for c in numeric_can_be_blank:
+    # numéricos que podem ficar vazios (não imputar)
+    for c in ["Start","End","Protein_Start","Protein_End","CDNAStart","CDNAEnd"]:
         if c in df.columns:
             df[c] = df[c].where(df[c].astype(str).str.len() > 0, "")
 
-    if "VariantAllele" in df.columns:
-        df = df.drop(columns=["VariantAllele"])
-    if "ClinicalSignificance" in df.columns:
-        df = df.drop(columns=["ClinicalSignificance"])
-
-    final_cols = [c for c in BASE_COL_ORDER if c in df.columns]
-    other_cols = [c for c in df.columns if c not in final_cols]
-    df = df[final_cols + other_cols]
+    # removidos auxiliares que não entram como feature
+    for c in ["VariantAllele","ClinicalSignificance"]:
+        if c in df.columns:
+            df = df.drop(columns=[c])
 
     df.to_csv(output_csv, index=False)
     return df

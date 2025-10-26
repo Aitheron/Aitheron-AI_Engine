@@ -68,3 +68,74 @@ Além da **LGPD**, existe alguma legislação, regulamentação ou normativa esp
 - Uniprot (BRCA1 - Human) : https://www.uniprot.org/uniprotkb?query=%28gene%3ABRCA1%29&facets=model_organism%3A9606
 - Proteina P38398-5 para o id(ENST00000352993) -> https://www.uniprot.org/uniprotkb/P38398/genomic-coordinates
 - Arquivo Patient.fasta é um arquivo alterado na mão para teste de detecção de variantes
+
+# 📖 Explicação das métricas
+
+- **AUROC (Area Under ROC Curve)**  
+  Mede a capacidade do modelo de separar classes em todos os thresholds.  
+  - 1.0 = separação perfeita  
+  - 0.5 = aleatório  
+
+- **AUPRC (Area Under Precision-Recall Curve)**  
+  Mostra o equilíbrio entre *precisão* e *recall*, importante em dados desbalanceados.  
+  - 1.0 = perfeito  
+  - Quanto mais próximo de 0.5, mais fraco  
+
+- **Recall (Sensibilidade)**  
+  Dos positivos verdadeiros, quantos o modelo consegue encontrar.  
+  - Alta recall = quase nenhum positivo real fica de fora  
+
+- **Precision (Precisão Positiva)**  
+  Dos exemplos previstos como positivos, quantos são realmente positivos.  
+  - Alta precision = poucos falsos positivos  
+
+- **F1-score**  
+  Média harmônica entre *precision* e *recall*.  
+  - Bom para medir equilíbrio entre os dois  
+
+- **Balanced Accuracy**  
+  Média da acurácia por classe (corrige para desbalanceamento).  
+
+- **MCC (Matthews Correlation Coefficient)**  
+  Correlação entre verdade e predição.  
+  - -1 = tudo errado  
+  - 0 = aleatório  
+  - +1 = perfeito  
+
+- **Accuracy (Acurácia Simples)**  
+  Proporção de acertos totais. Pode ser enganosa em classes desbalanceadas.  
+
+- **mean / std**  
+  - `mean`: média dos folds da validação cruzada  
+  - `std`: desvio padrão → quanto maior, mais instável o modelo  
+
+---
+
+# 📊 Resultados iniciais por gene
+
+## 🔬 BRCA1
+- **AUROC**: 0.993 ± 0.0027 → separação quase perfeita  
+- **AUPRC**: 0.996 ± 0.0013 → altíssima precisão-recall  
+- **Recall**: 0.979 ± 0.0075 → quase todos os positivos encontrados  
+- **Precision**: 0.983 ± 0.0079 → quase sem falsos positivos  
+- **F1-score**: 0.981 ± 0.0051 → equilíbrio excelente  
+- **Balanced Accuracy**: 0.973 ± 0.0083  
+- **MCC**: 0.945 ± 0.0150 → correlação forte, quase perfeito  
+- **Accuracy**: 0.975 ± 0.0067  
+
+👉 **Resumo**: Modelo extremamente bom e consistente para BRCA1.
+
+---
+
+## 🔬 BRCA2
+- **AUROC**: 0.548 ± 0.295 → desempenho instável, próximo de aleatório em alguns folds  
+- **AUPRC**: 0.701 ± 0.205 → aceitável, mas longe do ideal  
+- **Recall**: 0.969 ± 0.068 → quase todos os positivos encontrados  
+- **Precision**: 0.733 ± 0.121 → número relevante de falsos positivos  
+- **F1-score**: 0.825 ± 0.054 → equilíbrio aceitável, mas abaixo do BRCA1  
+- **Balanced Accuracy**: 0.630 ± 0.153 → dificuldades em tratar classes de forma equilibrada  
+- **MCC**: 0.327 ± 0.294 → baixa correlação, instável  
+- **Accuracy**: 0.727 ± 0.099  
+
+👉 **Resumo**: Modelo para BRCA2 tem recall alto (quase não perde positivos),  
+mas sofre com baixa precisão e instabilidade entre folds.
