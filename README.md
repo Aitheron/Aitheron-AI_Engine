@@ -139,3 +139,26 @@ Além da **LGPD**, existe alguma legislação, regulamentação ou normativa esp
 
 👉 **Resumo**: Modelo para BRCA2 tem recall alto (quase não perde positivos),  
 mas sofre com baixa precisão e instabilidade entre folds.
+
+## 🧩 Matrizes de confusão (CV — somadas em todos os folds)
+
+> Linhas = **Verdadeiro** (rótulo real) • Colunas = **Predito** (saída do modelo)  
+> **TN** = True Negative • **FP** = False Positive • **FN** = False Negative • **TP** = True Positive
+
+### BRCA1
+|                  | **Pred: Benigno** | **Pred: Patogênico** |
+|------------------|-------------------|-----------------------|
+| **Verdadeiro Benigno**     | **TN = 947**         | **FP = 145**           |
+| **Verdadeiro Patogênico**  | **FN = 16**          | **TP = 2148**          |
+
+- Matriz (forma 2×2): `[[947, 145], [16, 2148]]`  
+- Totais: reais benignos = 947 + 145 = **1092** • reais patogênicos = 16 + 2148 = **2164** • total = **3256**
+
+### BRCA2
+|                  | **Pred: Benigno** | **Pred: Patogênico** |
+|------------------|-------------------|-----------------------|
+| **Verdadeiro Benigno**     | **TN = 1385**        | **FP = 45**            |
+| **Verdadeiro Patogênico**  | **FN = 19**          | **TP = 2556**          |
+
+- Matriz (forma 2×2): `[[1385, 45], [19, 2556]]`  
+- Totais: reais benignos = 1385 + 45 = **1430** • reais patogênicos = 19 + 2556 = **2575** • total = **4005**
