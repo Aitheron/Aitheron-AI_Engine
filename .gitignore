@@ -3,6 +3,7 @@ filess
 __pycache__/
 
 *.json
+!metrics.json
 *.ipynb
 *.txt
 *.csv

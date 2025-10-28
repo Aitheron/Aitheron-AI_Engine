@@ -1,6 +1,10 @@
 import pandas as pd
 from typing import Iterable
-from core.settings import IMPACT_RANK, TERM_TO_FLAG
+from core.settings import (
+    IMPACT_RANK,
+    TERM_TO_FLAG,
+    TYPE_FLAG_COLS
+)
 
 DROP_COLS = {
     "VariationID","ClinSigSimple","ClinicalSignificance","Origin","OriginSimple",
@@ -9,10 +13,6 @@ DROP_COLS = {
     "FASTA_CDS","FASTA_Protein","ProteinName","ProteinFunction","ProteinFeatures","ProteinDesc",
     "Impact", "ConsequenceTerms", "Type"
 }
-
-_TYPE_FLAG_COLS = [
-    "IsSNV", "IsDeletion", "IsDuplication", "IsInsertion", "IsIndel"
-]
 
 def _as_str(s):
     return "" if pd.isna(s) else str(s)
@@ -67,7 +67,7 @@ def _apply_term_flags(terms: set) -> dict:
     return d
 
 def _apply_type_flags(type_value: str) -> dict:
-    flags = {c: 0 for c in _TYPE_FLAG_COLS}
+    flags = {c: 0 for c in TYPE_FLAG_COLS}
     norm = type_value.lower()
     if norm == "single nucleotide variant":
         flags["IsSNV"] = 1
@@ -127,10 +127,10 @@ def build_training_dataset(input_csv: str, output_csv: str) -> pd.DataFrame:
     # flags de Type (hotspots do tipo)
     type_flags_rows = df["Type"].apply(_apply_type_flags).tolist()
     type_flags_df = pd.DataFrame(type_flags_rows)
-    for col_name in _TYPE_FLAG_COLS:
+    for col_name in TYPE_FLAG_COLS:
         if col_name not in type_flags_df.columns:
             type_flags_df[col_name] = 0
-    for col_name in _TYPE_FLAG_COLS:
+    for col_name in TYPE_FLAG_COLS:
         df[col_name] = type_flags_df[col_name].astype(int)
 
     # drop de colunas

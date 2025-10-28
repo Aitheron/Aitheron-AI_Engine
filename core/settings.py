@@ -38,3 +38,7 @@ CLINVAR_TAB_URL = "https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/varian
 OUTDIR = Path(__file__).resolve().parents[1] / "filess"
 OUTDIR.mkdir(exist_ok=True)
 VALID_CONFIDENCE_NCBI = ["reviewed by expert panel", "practice guideline"]
+
+TYPE_FLAG_COLS = [
+    "IsSNV", "IsDeletion", "IsDuplication", "IsInsertion", "IsIndel"
+]

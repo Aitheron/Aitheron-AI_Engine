@@ -49,7 +49,7 @@ class TrainParams:
 
 @dataclass
 class Config:
-    # IMPORTANT: todos que são objetos devem usar default_factory
+    # IMPORTANTE: todos que são objetos devem usar default_factory
     flags: ModelFlags = field(default_factory=ModelFlags)
     paths: Paths = field(default_factory=Paths)
     cols: Columns = field(default_factory=Columns)
