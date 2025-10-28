@@ -162,3 +162,87 @@ mas sofre com baixa precisão e instabilidade entre folds.
 
 - Matriz (forma 2×2): `[[1385, 45], [19, 2556]]`  
 - Totais: reais benignos = 1385 + 45 = **1430** • reais patogênicos = 19 + 2556 = **2575** • total = **4005**
+
+# Como calculamos a “Confiança” do modelo
+
+A “confiança” que exibimos vem da **entropia** da distribuição de probabilidades prevista para as classes, **normalizada** para ficar entre 0 e 1, e então invertida:
+
+\[
+\textbf{Confiança} \;=\; 1 \;-\; \underbrace{\frac{H(p)}{\log K}}_{\text{entropia normalizada}}
+\]
+
+- \(p\) é o vetor de probabilidades previsto pelo modelo para as \(K\) classes (no nosso caso, \(K=4\)):
+  \[
+  p = [P(y{=}0),\;P(y{=}1),\;P(y{=}2),\;P(y{=}3)]
+  \]
+  com \(p_k \ge 0\) e \(\sum_k p_k = 1\).
+- \(H(p)\) é a **entropia de Shannon** (com log natural, “ln”):
+  \[
+  \boxed{H(p) \;=\; -\sum_{k=0}^{K-1} p_k \,\ln p_k}
+  \]
+- \(\log K\) é o valor **máximo** que a entropia pode atingir quando a distribuição é **uniforme** \((p_k = 1/K)\). Dividir por \(\log K\) normaliza o valor para \([0,1]\).
+
+> Interpretação rápida  
+> - **Entropia baixa** → distribuição concentrada em uma classe → **alta confiança**.  
+> - **Entropia alta** → distribuição espalhada entre classes → **baixa confiança**.
+
+---
+
+## Passo a passo (com \(K=4\))
+
+1. **Probabilidades por classe**  
+   Suponha que o modelo preveja:
+   \[
+   p = [p_0,\; p_1,\; p_2,\; p_3] \quad\text{com}\quad p_0+p_1+p_2+p_3=1
+   \]
+
+2. **Entropia (em “nats”, usando ln)**  
+   \[
+   H(p) = -\big(p_0 \ln p_0 + p_1 \ln p_1 + p_2 \ln p_2 + p_3 \ln p_3\big)
+   \]
+   > Dica: se algum \(p_k=0\), usamos um **epsilon** muito pequeno (ex.: \(10^{-12}\)) só para evitar \(\ln(0)\).
+
+3. **Normalização**  
+   \[
+   H_{\text{norm}}(p) = \frac{H(p)}{\ln 4}
+   \]
+   - Por que \(\ln 4\)? Porque \(\ln K\) é a **entropia máxima** quando \(p = [\tfrac{1}{K},\ldots,\tfrac{1}{K}]\).  
+   - Assim, \(H_{\text{norm}}\in[0,1]\): 0 = certeza total; 1 = totalmente uniforme.
+
+4. **Confiança**  
+   \[
+   \text{Confiança} = 1 - H_{\text{norm}}(p)
+   \]
+   - Resultado também em \([0,1]\). Quanto **maior** o valor, **mais confiante** o modelo.
+
+---
+
+## Passo a passo (com \(K=4\))
+
+1. **Probabilidades por classe**  
+   Suponha:
+   \[
+   p = [0.12,\; 0.02,\; 0.03,\; 0.83]
+   \]
+
+2. **Entropia (nats, usando \(\ln\))**  
+   \[
+   H(p) = -\big(0.12\ln0.12 + 0.02\ln0.02 + 0.03\ln0.03 + 0.83\ln0.83\big)
+   \]
+   \[
+   H(p) \;\approx\; \mathbf{0.5925}
+   \]
+
+3. **Normalização**  
+   \[
+   \log 4 \;\approx\; 1.3863
+   \qquad\Rightarrow\qquad
+   H_{\text{norm}}(p) \;=\; \frac{H(p)}{\log 4} \;\approx\; \frac{0.5925}{1.3863} \;\approx\; \mathbf{0.4274}
+   \]
+
+4. **Confiança**  
+   \[
+   \text{Confiança} \;=\; 1 - H_{\text{norm}}(p) \;\approx\; 1 - 0.4274 \;\approx\; \mathbf{0.5726}
+   \]
+
+> Observação prática: mesmo com a maior probabilidade em uma classe, a presença de massa não desprezível nas demais aumenta a entropia e reduz a confiança. É exatamente isso que a entropia captura.

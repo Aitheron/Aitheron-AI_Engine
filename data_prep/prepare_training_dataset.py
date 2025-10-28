@@ -34,7 +34,6 @@ def _parse_terms(s: str) -> set:
 def _pick_alt_allele(is_coding: int, alt: str, variant_allele: str) -> str:
     alt = _as_str(alt)
     va = _as_str(variant_allele)
-    # em região codificante, se VariantAllele vier único, preferimos ele
     if is_coding == 1 and va and ("," not in va) and ("|" not in va):
         return va
     if not alt:
@@ -46,20 +45,21 @@ def _len_allele(x: str) -> int:
 
 def _map_label(clinsig: str) -> int:
     s = _as_str(clinsig).lower()
-    if any(k in s for k in ["pathogenic", "likely_pathogenic", "pathogenic/likely_pathogenic"]):
-        return 1
     if "uncertain" in s:
+        return 2
+    if "likely_pathogenic" in s or "pathogenic/likely_pathogenic" in s or "pathogenic" in s:
+        return 3
+    if "likely_benign" in s or "benign/likely_benign" in s:
         return 1
-    if any(k in s for k in ["benign", "likely_benign", "benign/likely_benign"]):
+    if "benign" in s:
         return 0
-    return 1
+    return 2
 
 def _impact_to_rank(impact: str):
     s = _as_str(impact).upper()
     return IMPACT_RANK.get(s, "")
 
 def _apply_term_flags(terms: set) -> dict:
-    # cria todas as Is* do TERM_TO_FLAG com 0
     d = { col: 0 for col in TERM_TO_FLAG.values() }
     for term, col in TERM_TO_FLAG.items():
         if term.lower() in terms:
@@ -100,31 +100,25 @@ def build_training_dataset(input_csv: str, output_csv: str) -> pd.DataFrame:
 
     df["IsCoding"] = df["IsCoding"].apply(_normalize_is_coding)
 
-    # escolhe ALT único
     df["AlternateAllele"] = [
         _pick_alt_allele(is_coding, alt, variant_allele)
         for is_coding, alt, variant_allele in zip(df["IsCoding"], df["AlternateAllele"], df["VariantAllele"])
     ]
 
-    # comprimentos
     df["len_ref"] = df["ReferenceAllele"].apply(_len_allele)
     df["len_alt"] = df["AlternateAllele"].apply(_len_allele)
     df["length_change"] = df["len_alt"] - df["len_ref"]
 
-    # rótulo binário
     df["Label"] = df["ClinicalSignificance"].apply(_map_label)
 
-    # impacto -> rank numérico
     df["ImpactRank"] = df["Impact"].apply(_impact_to_rank)
 
-    # flags de consequence terms
     term_sets = df["ConsequenceTerms"].apply(_parse_terms)
     flag_rows = term_sets.apply(_apply_term_flags).tolist()
     flags_df = pd.DataFrame(flag_rows)
     for col_name in flags_df.columns:
         df[col_name] = flags_df[col_name].astype(int)
 
-    # flags de Type (hotspots do tipo)
     type_flags_rows = df["Type"].apply(_apply_type_flags).tolist()
     type_flags_df = pd.DataFrame(type_flags_rows)
     for col_name in TYPE_FLAG_COLS:
@@ -133,17 +127,14 @@ def build_training_dataset(input_csv: str, output_csv: str) -> pd.DataFrame:
     for col_name in TYPE_FLAG_COLS:
         df[col_name] = type_flags_df[col_name].astype(int)
 
-    # drop de colunas
     to_drop: Iterable[str] = [c for c in DROP_COLS if c in df.columns]
     if to_drop:
         df = df.drop(columns=to_drop)
 
-    # numéricos que podem ficar vazios (não imputar)
     for c in ["Start","End","Protein_Start","Protein_End","CDNAStart","CDNAEnd"]:
         if c in df.columns:
             df[c] = df[c].where(df[c].astype(str).str.len() > 0, "")
 
-    # removidos auxiliares que não entram como feature
     for c in ["VariantAllele","ClinicalSignificance"]:
         if c in df.columns:
             df = df.drop(columns=[c])

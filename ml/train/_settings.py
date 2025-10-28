@@ -9,7 +9,7 @@ class ModelFlags:
 
 @dataclass
 class Paths:
-    train_csv_path: str = "./filess/clinvar_BRCA1_BRCA2_GRCh38_training.csv"
+    train_csv_path: str = "./training_dataset.csv"
     artifacts_dir: str = "./artifacts"
 
 @dataclass
