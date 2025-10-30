@@ -1,6 +1,7 @@
 import os
 import requests
 from enum import Enum
+from typing import Dict, Any
 
 class GeneSelection(str, Enum):
     BRCA1 = "BRCA1"
@@ -51,5 +52,22 @@ class APIClient:
             }
 
         r = requests.post(url, json=payload, timeout=3600)
+        r.raise_for_status()
+        return r.content
+
+    def predict_from_fasta_file(
+        self,
+        gene: str,
+        file_name: str,
+        file_bytes: bytes,
+        timeout: int = 300
+    ) -> Dict[str, Any]:
+
+        url = f"{self.base_url}/api/ml/predict"
+        files = {
+            "file": (file_name, file_bytes, "application/octet-stream")
+        }
+        data = {"gene": gene}
+        r = requests.post(url, files=files, data=data, timeout=timeout)
         r.raise_for_status()
         return r.content

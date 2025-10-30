@@ -33,7 +33,7 @@ LABELS = {0:"Benigno", 1:"Possivelmente Benigno", 2:"VUS", 3:"Patogênico"}
 
 def entropy(p):
     p = np.clip(p, 1e-12, 1.0) # Clip evita log de 0
-    return -(p * np.log(p)).sum()
+    return -(p * np.log(p)).sum(axis=1)
 
 def pretty_line(head, idx, pvec, k):
     top1 = float(pvec.max())

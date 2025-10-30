@@ -1,6 +1,6 @@
 import streamlit as st
 
-from utils import sidebar
+from frontend._utils import sidebar
 
 sidebar()
 

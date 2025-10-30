@@ -2,6 +2,8 @@ import json, time
 import requests
 import pandas as pd
 
+from typing import Optional
+
 from core.settings import (
     IMPACT_RANK,
     TERM_TO_FLAG,
@@ -80,7 +82,6 @@ def vep_call(vcf_like):
 
 def pick_best_transcript(rec, most):
     tcs=rec.get("transcript_consequences") or []
-    print(tcs)
     c1=[tc for tc in tcs if (tc.get("biotype")=="protein_coding" and most in (tc.get("consequence_terms") or []))]
     if c1: return c1[0]
     c2=[tc for tc in tcs if (tc.get("canonical")=="YES" and tc.get("biotype")=="protein_coding")]
@@ -129,8 +130,10 @@ def _apply_type_flags(type_value: str) -> dict: # Refatorar posteriormente (funÃ
         flags["IsIndel"] = 1
     return flags
 
-def enrich_with_vep_to_csv(in_csv, out_csv):
-    df=pd.read_csv(in_csv)
+def enrich_patient_variants_with_vep(
+    df,
+    out_csv : Optional[str] = None
+):
     base_cache={}
     vcf_variants=[]; mapping=[]
     for i,row in df.iterrows():
@@ -145,7 +148,6 @@ def enrich_with_vep_to_csv(in_csv, out_csv):
     annos=[None]*len(df)
     for i0,chunk in batched(vcf_variants,200):
         resp = vep_call(chunk)
-        print(resp)
         for j,rec in enumerate(resp):
             annos[mapping[i0+j]]=rec
         time.sleep(0.15)
@@ -197,20 +199,34 @@ def enrich_with_vep_to_csv(in_csv, out_csv):
 
         records.append(rec_out)
 
-    out=pd.DataFrame(records)
+    df = pd.DataFrame(records)
 
     for c in is_cols:
-        if c not in out.columns:
-            out[c]=0
+        if c not in df.columns:
+            df[c]=0
     for c in TYPE_FLAG_COLS:
-        if c not in out.columns:
-            out[c]=0
+        if c not in df.columns:
+            df[c]=0
 
-    out.to_csv(out_csv, index=False)
-    return out
+    if out_csv:
+        df.to_csv(out_csv, index=False)
+
+    return df
 
 if __name__=="__main__":
-    in_csv="patient_variants.csv"
+
     out_csv="patient_variants_annotated.csv"
-    df=enrich_with_vep_to_csv(in_csv,out_csv)
-    print(f"Anotadas {len(df)} variantes -> {out_csv}")
+
+    line = "17,43049187,43049187,C,A,SNV,CS"
+    cols = ["Chromosome", "Start", "End", "Ref", "Alt", "Type", "Origin"]  
+
+    parts = line.strip().split(",")
+    df = pd.DataFrame([dict(zip(cols, parts))], columns=cols)
+
+    df["Start"] = pd.to_numeric(df["Start"], errors="raise")
+    df["End"]   = pd.to_numeric(df["End"], errors="raise")
+
+    enriched_df = enrich_patient_variants_with_vep(
+        df=df
+    )
+    print(f"Anotadas {len(enriched_df)} variantes -> {out_csv}")

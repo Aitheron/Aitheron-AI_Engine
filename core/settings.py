@@ -1,5 +1,7 @@
 from pathlib import Path
 
+ALLOWED_GENES = ["BRCA1", "BRCA2"]
+
 # Mapeia cada consequence_term (VEP/SO) -> coluna binária Is*
 TERM_TO_FLAG = {
     # coding / protein-level

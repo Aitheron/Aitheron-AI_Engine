@@ -2,8 +2,8 @@ import os
 import pandas as pd
 import streamlit as st
 
-from utils import sidebar
-from client.api_client import APIClient, GeneSelection, resolve_api_base_url
+from _utils import sidebar
+from client.api_client import APIClient, resolve_api_base_url
 
 from analysis.plot import (
     preprocess,
@@ -167,9 +167,6 @@ plot_gene_hotspots(st, dff, bin_bp=int(bin_bp))
 
 with st.expander("Ver amostra da tabela filtrada (primeiras 200 linhas)"):
     st.dataframe(dff.head(200))
-
-
-import streamlit as st
 
 resumo = """
 ## 📊 Resumo das Análises dos Dados — BRCA1 e BRCA2

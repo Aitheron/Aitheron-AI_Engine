@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import torch
 
+from typing import Optional
+
 from ml.train._settings import Config
 from ml.train.model import MultitaskMLP
 
@@ -61,15 +63,20 @@ class Predictor:
             self.model.eval()
 
     @torch.no_grad()
-    def predict_df(self, df_in: pd.DataFrame, batch_size: int = 4096) -> pd.DataFrame:
+    def predict_df(
+        self,
+        to_predict_df: pd.DataFrame,
+        batch_size: int = 4096,
+        to_save : Optional[bool] = False
+    ) -> pd.DataFrame:
         gene_col = self.cfg.cols.gene_col
-        if gene_col not in df_in.columns:
+        if gene_col not in to_predict_df.columns:
             raise ValueError(f"Coluna obrigatória ausente: {gene_col}")
 
-        X = self.pre.transform(df_in)
+        X = self.pre.transform(to_predict_df)
         self._ensure_model(X.shape[1])
 
-        n = len(df_in)
+        n = len(to_predict_df)
         preds = np.zeros(n, dtype=int)
         probs = np.zeros(n, dtype=float)
         class_idx = np.zeros(n, dtype=int)
@@ -79,7 +86,7 @@ class Predictor:
         top2_arr = np.zeros(n, dtype=float)
         p0_store = np.zeros((n, 4), dtype=float)
         p1_store = np.zeros((n, 4), dtype=float)
-        genes = df_in[gene_col].to_numpy()
+        genes = to_predict_df[gene_col].to_numpy()
 
         LABELS = {0: "Benigno", 1: "Possivelmente Benigno", 2: "VUS", 3: "Patogênico"}
 
@@ -139,19 +146,17 @@ class Predictor:
                     k = int(k1[j])
                     print(f"BRCA2 idx {start+j:>5} | P0={p[0]:.4f} P1={p[1]:.4f} P2={p[2]:.4f} P3={p[3]:.4f} | argmax={k} ({LABELS[k]}) | top1={top1_1[j]:.4f} top2={top2_1[j]:.4f} margin={margin_1[j]:.4f} conf={conf1[j]:.4f}")
 
-        out = df_in.copy()
+        predicted_df = to_predict_df.copy()
         label_map = {0: "Benigno", 1: "Possivelmente Benigno", 2: "VUS", 3: "Patogênico"}
         final_class = [label_map[int(k)] for k in class_idx]
-        out["Classificação Clinica"] = final_class
-        col = out.pop("Classificação Clinica")
-        i = out.columns.get_loc("impact")
-        out.insert(i + 1, "Classificação Clinica", col)
+        predicted_df["Classificação Clinica"] = final_class
 
-        out["Confiança do Modelo"] = np.round(conf, 4)
-        out["Risco da mutação ser Patogênica"] = np.round(probs, 4)
+        predicted_df["Confiança do Modelo (%)"] = np.round(conf, 4)
+        predicted_df["Risco da mutação ser Patogênica (%)"] = np.round(probs, 4)
 
-        out.to_csv("predicted.csv", index=False)
-        return out
+        if to_save:
+            predicted_df.to_csv("predicted.csv", index=False)
+        return predicted_df
 
 if __name__ == "__main__":
     cfg = Config()
@@ -161,13 +166,5 @@ if __name__ == "__main__":
     to_predict_df = df.copy()
     new_values = ["BRCA1"] * len(to_predict_df)
     to_predict_df["GeneSymbol"] = new_values
-    to_predict_df.drop(
-        columns=[
-            "Origin",
-            "Type",
-            "ConsequenceTerms",
-            "impact"
-        ]
-    )
 
     df_out = predictor.predict_df(to_predict_df, batch_size=4096)

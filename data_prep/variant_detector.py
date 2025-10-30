@@ -1,8 +1,9 @@
-import csv
-from typing import List, Dict, Tuple
 import requests
 import mappy as mp
+import pandas as pd
+
 from Bio import SeqIO
+from typing import List, Dict, Tuple, Optional
 
 ENSEMBL_SEQ_REGION = "https://rest.ensembl.org/sequence/region/human/{region}"
 HEADERS_FASTA = {"Accept": "text/plain"}
@@ -12,9 +13,6 @@ GENE_LOCI = {
     "BRCA2": {"chrom": "13", "start": 32315474, "end": 32400266, "strand": +1},
 }
 
-TARGET_GENE = "BRCA1"
-PATIENT_FASTA_PATH = "./patient.fasta"
-OUT_CSV = "patient_variants.csv"
 MINIMAP2_PRESET = "map-ont"
 MIN_MAPQ = 0
 FLANK_BP = 500
@@ -159,7 +157,6 @@ def parse_cs_to_variants(cs: str, ref_start_1based: int, ref_name: str, ref_seq:
                 right_end = right_start + len(inserted)
                 right = ref_seq[right_start:right_end].upper()
 
-                print(left, inserted, right)
                 if left == inserted or right == inserted:
                     typ = "Duplicação"
             variants.append({"Chromosome": ref_name, "Start": anchor, "End": anchor, "Ref": "-", "Alt": inserted, "Type": typ, "Origin": "CS"})
@@ -212,7 +209,6 @@ def emit_softclip_variants(h, qseq: str, ref_seq: str, chrom: str, ref_global_st
                 vars_sc.append({"Chromosome": chrom, "Start": pos, "End": pos, "Ref": rb, "Alt": qb, "Type": "SNV", "Origin": "right_clip_rescue"})
         else:
             anchor = ref_global_start_1b + h.r_en
-            print("AAAAAAAAAAAAAAAAAA ", anchor)
             vars_sc.append({"Chromosome": chrom, "Start": anchor, "End": anchor, "Ref": "-", "Alt": ins, "Type": "Inserção", "Origin": "right_clip"})
     if h.q_st < len(qseq) and h.r_st < len(ref_seq):
         rb = ref_seq[h.r_st].upper()
@@ -228,7 +224,15 @@ def emit_softclip_variants(h, qseq: str, ref_seq: str, chrom: str, ref_global_st
             vars_sc.append({"Chromosome": chrom, "Start": pos, "End": pos, "Ref": rb, "Alt": qb, "Type": "SNV", "Origin": "right_edge_snv"})
     return vars_sc
 
-def analyze_patient_to_csv(ref_seq: str, chrom: str, ref_global_start_1b: int, patient_fasta_path: str, out_csv: str, preset: str, min_mapq: int):
+def analyze_patient_fasta(
+    ref_seq: str,
+    chrom: str,
+    ref_global_start_1b: int,
+    patient_fasta_path: str,
+    preset: str,
+    min_mapq: int,
+    out_csv : Optional[str] = None
+):
     al = mp.Aligner(seq=ref_seq, preset=preset)
     if not al:
         raise RuntimeError("Falha ao inicializar o minimap2 (mappy).")
@@ -250,34 +254,46 @@ def analyze_patient_to_csv(ref_seq: str, chrom: str, ref_global_start_1b: int, p
             rows.append(s)
     rows.sort(key=lambda r: (r["Chromosome"], r["Start"], r["End"], r.get("Type","")))
     cols = ["Chromosome", "Start", "End", "Ref", "Alt", "Type", "Origin"]
-    with open(out_csv, "w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=cols)
-        w.writeheader()
-        for r in rows:
-            w.writerow({k: r.get(k, "") for k in cols})
-    return rows
+    
+    cols = ["Chromosome", "Start", "End", "Ref", "Alt", "Type", "Origin"]
+    rows.sort(key=lambda r: (r["Chromosome"], r["Start"], r["End"], r.get("Type","")))
+    df = pd.DataFrame(rows, columns=cols)
 
-def detect_variants_from_fasta():
-    locus = GENE_LOCI[TARGET_GENE]
+    if not df.empty:
+        df["Start"] = pd.to_numeric(df["Start"], errors="coerce").astype("Int64")
+        df["End"]   = pd.to_numeric(df["End"], errors="coerce").astype("Int64")
+    
+    if out_csv:
+        df.to_csv(out_csv, index=False)
+
+    return df
+
+def detect_variants_from_fasta(
+    target_gene : str,
+    fasta_file_path : str
+):
+    locus = GENE_LOCI[target_gene]
     chrom = locus["chrom"]
     start = max(1, locus["start"] - FLANK_BP)
     end = locus["end"] + FLANK_BP
     strand = locus["strand"]
     ref_seq = fetch_reference(chrom, start, end, strand)
-    variants = analyze_patient_to_csv(
+    variants = analyze_patient_fasta(
         ref_seq=ref_seq,
         chrom=chrom,
         ref_global_start_1b=start,
-        patient_fasta_path=PATIENT_FASTA_PATH,
-        out_csv=OUT_CSV,
+        patient_fasta_path=fasta_file_path,
         preset=MINIMAP2_PRESET,
         min_mapq=MIN_MAPQ
     )
-    print(TARGET_GENE)
+    print(target_gene)
     print(f"{chrom}:{start}-{end} strand {strand} len={len(ref_seq)}")
-    print(PATIENT_FASTA_PATH)
-    print(OUT_CSV)
     print(f"Detected {len(variants)} variants")
 
+    return variants
+
 if __name__ == "__main__":
-    detect_variants_from_fasta()
+    detect_variants_from_fasta(
+        target_gene="BRCA1",
+        fasta_file_path="./patient.fasta"
+    )

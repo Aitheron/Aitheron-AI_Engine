@@ -1,5 +1,5 @@
 import streamlit as st
-from utils import sidebar
+from _utils import sidebar
 
 st.set_page_config(page_title="Aitheron", page_icon="🧬", layout="wide")
 
