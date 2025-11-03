@@ -25,6 +25,6 @@ RUN chmod +x ./run_server.sh
 
 ENV PYTHONPATH=/app
 
-EXPOSE 8000, 8501
+EXPOSE 8000 8501
 
 ENTRYPOINT ["./run_server.sh"]
