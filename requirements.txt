@@ -11,7 +11,7 @@ py3dmol==2.5.3
 pydantic==2.12.3
 Requests==2.32.5
 scikit_learn==1.7.2
-starlette==0.50.0
+starlette==0.48.0
 stmol==0.0.9
 streamlit==1.49.1
 tenacity==9.1.2
