@@ -1,18 +1,53 @@
-name: Aitheron
+name: Deploy via Self-Hosted Runner
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: aitheron
+  REGION: us-central1
+  REPO: aitheron-ai
+  IMAGE_NAME: aitheron
+  IMAGE_URL: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE_NAME}
+  TAG: ${{ github.sha }}
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag aitheron_image:$(date +%s)
+      - uses: actions/checkout@v4
+
+      - name: Auth GCP (SA JSON)
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.DEPLOY_IN_CLOUD_KEY }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+
+      - name: Build & Push
+        run: |
+          docker build -t ${IMAGE_URL}:${TAG} .
+          docker push ${IMAGE_URL}:${TAG}
+
+  deploy:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - name: Pull & Up
+        run: |
+          # Se a VM tiver gcloud + SA anexada com artifactregistry.reader:
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet || true
+
+          docker pull ${IMAGE_URL}:${TAG}
+          # Se usa docker-compose.yml na VM:
+          docker compose up -d
+          docker image prune -f

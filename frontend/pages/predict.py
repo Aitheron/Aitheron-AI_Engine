@@ -22,11 +22,10 @@ PROT_START = "Protein_Start"
 PROT_END = "Protein_End"
 CONSEQUENCE_COL = "Efeito no transcrito"
 
-BENIGN_SET = {"Benigno", "Benign"}
-LIKELY_BENIGN_SET = {"Provavelmente benigno", "Likely benign", "Likely_benign"}
-VUS_SET = {"VUS", "Uncertain significance", "Uncertain_significance", "Uncertain"}
-LIKELY_PATH_SET = {"Provavelmente patogênico", "Likely pathogenic", "Likely_pathogenic"}
-PATH_SET = {"Patogênico", "Pathogenic"}
+BENIGN_SET = {"Benigno"}
+LIKELY_BENIGN_SET = {"Possivelmente Benigno"}
+VUS_SET = {"VUS"}
+PATH_SET = {"Patogênico"}
 
 COLOR_BY_CLASS = {
     "Benigno": "green",
@@ -47,7 +46,7 @@ FAINT_BG = {
 
 GENE_TO_CIF = {
     "BRCA1": "../3d_models/AF_AFP38398F1.cif",
-    "BRCA2": "../3d_models/AF_AFP51587F1.cif"
+    "BRCA2": ""
 }
 
 @st.cache_data(show_spinner=False, ttl=24*3600)
@@ -55,37 +54,25 @@ def load_text_from_path(path):
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         return f.read()
 
-def detect_prob_col(df):
-    cand = [c for c in df.columns if "prob" in c.lower()]
-    return cand[0] if cand else None
-
-def normalize_prob(series):
-    s = pd.to_numeric(series, errors="coerce")
-    if s.max() is not None and s.max() > 1.0001:
-        s = s / 100.0
-    return s.clip(0,1)
-
-def classify_with_prob(row, prob_col):
+def classify_from_label(row):
     raw = str(row.get(CLASS_COL, "")).strip()
-    if raw in PATH_SET: return "Patogênico"
-    if raw in LIKELY_PATH_SET: return "Provavelmente patogênico"
-    if raw in BENIGN_SET: return "Benigno"
-    if raw in LIKELY_BENIGN_SET: return "Provavelmente benigno"
-    if raw in VUS_SET: return "VUS"
-    p = row.get(prob_col, None) if prob_col else None
-    if pd.isna(p): return "VUS"
-    return "Patogênico" if p >= 0.85 else "Provavelmente patogênico"
+    if raw in PATH_SET:
+        return "Patogênico"
+    if raw in BENIGN_SET:
+        return "Benigno"
+    if raw in LIKELY_BENIGN_SET:
+        return "Provavelmente benigno"
+    if raw in VUS_SET:
+        return "VUS"
+    return "VUS"
 
 def prepare_dataframe(df):
     df = df.copy()
-    prob_col = detect_prob_col(df)
-    if prob_col:
-        df[prob_col] = normalize_prob(df[prob_col])
     if CODING_FLAG_COL in df.columns:
         coding_mask = df[CODING_FLAG_COL].astype(str).str.lower().str.startswith("s")
     else:
         coding_mask = df[[PROT_START, PROT_END]].notna().all(axis=1)
-    df["_ClasseRender"] = df.apply(lambda r: classify_with_prob(r, prob_col), axis=1)
+    df["_ClasseRender"] = df.apply(lambda r: classify_from_label(r), axis=1)
     df["_CorRender"] = df["_ClasseRender"].map(lambda x: COLOR_BY_CLASS.get(x, "magenta"))
     df_coding = df[coding_mask & df[[PROT_START, PROT_END]].notna().all(axis=1)].copy().reset_index(drop=True)
     df_non = df[~(coding_mask & df[[PROT_START, PROT_END]].notna().all(axis=1))].copy().reset_index(drop=True)
@@ -96,7 +83,8 @@ def short_tag(row):
     cls = str(row.get("_ClasseRender", "")).strip()
     if cons and cls:
         return f"{cons} · {cls}"
-    if cons: return cons
+    if cons:
+        return cons
     return cls if cls else "var"
 
 def build_records(df_coding):
@@ -176,13 +164,27 @@ def render_structure(coords_str, fmt, df_coding, records, focus_idx=None, width=
     showmol(v, height=height, width=width)
 
 def reset_state():
-    for k in ("header","seq","gene","payload_preview","api_result","result_df","result_bytes","result_filename","df_raw","df_coding","df_non","records","focus_idx","cif_text"):
+    for k in (
+        "header",
+        "seq",
+        "gene",
+        "payload_preview",
+        "api_result",
+        "result_df",
+        "result_bytes",
+        "result_filename",
+        "df_raw",
+        "df_coding",
+        "df_non",
+        "records",
+        "focus_idx",
+        "cif_text"
+    ):
         st.session_state.pop(k, None)
 
 @st.cache_data(show_spinner=False)
 def load_fasta_bytes():
     fasta_path = Path(__file__).resolve().parents[2] / "patient.fasta"
-    print(fasta_path)
     return fasta_path.read_bytes()
 
 def on_select_change():
@@ -207,7 +209,6 @@ with top_right:
         - Se enviar FASTA de BRCA1 com gene **BRCA2** selecionado (ou vice-versa), **não há correção automática**.
         """
     )
-
     st.download_button(
         label="📥 Baixar .fasta (Exemplo)",
         data=load_fasta_bytes(),
@@ -255,7 +256,7 @@ with top_left:
         }
         st.session_state["payload_preview"] = file_preview
         st.expander("Prévia do arquivo", expanded=False).json(st.session_state["payload_preview"])
-        btn = st.button("📤 Enviar para processamento", type="primary", use_container_width=True)
+        btn = st.button("📤 Enviar para processamento", type="secondary", use_container_width=True)
         if btn:
             client = APIClient()
             try:
@@ -276,10 +277,7 @@ if "result_bytes" in st.session_state:
     st.session_state["df_raw"], st.session_state["df_coding"], st.session_state["df_non"] = prepare_dataframe(df)
     st.session_state["records"] = build_records(st.session_state["df_coding"])
     try:
-        if st.session_state.get("gene") == "BRCA1":
-            cif_path = '../3d_models/AF_AFP38398F1.cif'
-        else:
-            cif_path = ''
+        cif_path = GENE_TO_CIF.get(st.session_state.get("gene"), "")
         st.session_state["cif_text"] = load_text_from_path(cif_path) if cif_path else None
     except Exception as e:
         st.error(f"Falha ao carregar modelo 3D: {e}")
