@@ -51,5 +51,7 @@ jobs:
         run: |
           gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet || true
           docker pull ${IMAGE_URL}:${TAG}
-          docker compose up -d
+
+          docker rm -f aitheron || true
+          docker run -d --name aitheron --restart unless-stopped ${IMAGE_URL}:${TAG}
           docker image prune -f
