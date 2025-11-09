@@ -54,7 +54,7 @@ jobs:
 
           docker rm -f aitheron || true
           docker run -d --name aitheron --restart unless-stopped \
-          -p 127.0.0.1:8501:8501 \
-          -p 127.0.0.1:8000:8000 \
-          us-central1-docker.pkg.dev/aitheron/aitheron-ai/aitheron:<TAG>
+            -p 127.0.0.1:8501:8501 \
+            -p 127.0.0.1:8000:8000 \
+            ${IMAGE_URL}:${TAG}
           docker image prune -f
