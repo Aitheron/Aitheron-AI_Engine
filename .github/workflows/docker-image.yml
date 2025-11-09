@@ -53,5 +53,5 @@ jobs:
           docker pull ${IMAGE_URL}:${TAG}
 
           docker rm -f aitheron || true
-          docker run -d --name aitheron --restart unless-stopped ${IMAGE_URL}:${TAG}
+          docker run -d --name aitheron --restart unless-stopped -p 80:8501 "${IMAGE_URL}:${TAG}"
           docker image prune -f
