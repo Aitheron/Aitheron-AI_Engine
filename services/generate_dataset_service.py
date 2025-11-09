@@ -27,6 +27,24 @@ def run_generate_dataset_service(
     if not genes:
         raise ValueError("No genes provided.")
     genes_sorted = sorted(genes)
+    base_name = f"clinvar_{'_'.join(genes_sorted)}_GRCh38"
+    merged_csv_path = str(Path(OUTDIR) / f"{base_name}_merged.csv")
+    training_csv_path = str(Path(OUTDIR) / f"{base_name}_training.csv")
+
+    def _ensure_training_from_merged():
+        build_training_dataset(merged_csv_path, training_csv_path)
+        if is_ready_file(training_csv_path):
+            df_tr = pd.read_csv(training_csv_path, dtype=str)
+            df_tr = _drop_invalid_rs(df_tr)
+            df_tr.to_csv(training_csv_path, index=False)
+
+    if not force and is_ready_file(merged_csv_path):
+        if is_training_dt:
+            if not is_ready_file(training_csv_path):
+                _ensure_training_from_merged()
+            return {"dataset": training_csv_path, "kind": "training"}
+        return {"dataset": merged_csv_path, "kind": "merged"}
+
     out_paths_by_gene = {}
     for gene in genes_sorted:
         initial_df_path = f"{OUTDIR}/clinvar_{gene}_GRCh38.tsv"
@@ -79,17 +97,11 @@ def run_generate_dataset_service(
     merged_df = pd.concat(dfs, ignore_index=True)
     merged_df = _drop_invalid_rs(merged_df)
 
-    base_name = f"clinvar_{'_'.join(genes_sorted)}_GRCh38"
-    merged_csv_path = str(Path(OUTDIR) / f"{base_name}_merged.csv")
     merged_df.to_csv(merged_csv_path, index=False)
 
     if is_training_dt:
-        training_csv_path = str(Path(OUTDIR) / f"{base_name}_training.csv")
-        build_training_dataset(merged_csv_path, training_csv_path)
-        if is_ready_file(training_csv_path):
-            df_tr = pd.read_csv(training_csv_path, dtype=str)
-            df_tr = _drop_invalid_rs(df_tr)
-            df_tr.to_csv(training_csv_path, index=False)
+        _ensure_training_from_merged()
         return {"dataset": training_csv_path, "kind": "training"}
 
     return {"dataset": merged_csv_path, "kind": "merged"}
+
