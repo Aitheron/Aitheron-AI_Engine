@@ -28,7 +28,7 @@ def run_generate_dataset_service(
         raise ValueError("No genes provided.")
     genes_sorted = sorted(genes)
     base_name = f"clinvar_{'_'.join(genes_sorted)}_GRCh38"
-    merged_csv_path = str(Path(OUTDIR) / f"{base_name}_merged.csv")
+    merged_csv_path = str(Path(OUTDIR) / f"{base_name}_merged.csv.gz")
     training_csv_path = str(Path(OUTDIR) / f"{base_name}_training.csv")
 
     def _ensure_training_from_merged():

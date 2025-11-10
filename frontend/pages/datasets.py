@@ -20,7 +20,7 @@ from analysis.plot import (
 
 st.set_page_config(page_title="BRCA1/2 – Datasets", layout="wide")
 
-DATASET_PATH = '../files/clinvar_BRCA1_BRCA2_GRCh38_merged.xlsx'
+DATASET_PATH = '../files/clinvar_BRCA1_BRCA2_GRCh38_merged.csv.gz'
 
 st.title("📊 Datasets")
 st.caption("Baixe os datasets utilizados (com cache no servidor) e visualize análises padronizadas.")
@@ -106,7 +106,7 @@ if not os.path.exists(DATASET_PATH):
     st.stop()
 
 with st.spinner("Lendo a planilha fixa..."):
-    df_raw = _read_fixed_xlsx(DATASET_PATH)
+    df_raw = pd.read_csv(DATASET_PATH)
 
 if df_raw.empty:
     st.warning("A planilha foi lida, mas está vazia.")
