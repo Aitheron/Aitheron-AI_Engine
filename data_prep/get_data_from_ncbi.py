@@ -50,6 +50,3 @@ def download_ncbi_gene_summary(gene):
     gene_df.to_csv(f"{OUTDIR}/clinvar_{gene}_GRCh38.tsv", sep="\t", index=False)
     
     return gene_df
-
-if __name__ == "__main__":
-    download_ncbi_gene_summary()
