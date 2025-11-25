@@ -15,3 +15,5 @@ teste.fasta
 teste.py
 
 files/
+
+.coverage

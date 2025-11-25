@@ -20,6 +20,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # se você tiver um requirements-dev.txt, dá pra instalar aqui também:
+          # pip install -r requirements-dev.txt
+
+      - name: Run unit tests
+        run: |
+          pytest --maxfail=1 --disable-warnings -q
+
       - name: Auth GCP (SA JSON)
         uses: google-github-actions/auth@v2
         with:
