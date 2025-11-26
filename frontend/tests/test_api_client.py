@@ -37,7 +37,9 @@ def test_download_dataset_bytes_posts_correct_payload(monkeypatch):
 
     class FakeResp:
         def __init__(self, content=b"OK"): self.content = content
-        def raise_for_status(self): pass
+        def raise_for_status(self): 
+            """Fake method used in tests: does nothing to simulate a successful HTTP response."""
+            pass
 
     def fake_post(url, json=None, timeout=None, **_):
         sent["url"] = url
@@ -68,7 +70,9 @@ def test_predict_from_fasta_file_posts_multipart(monkeypatch):
 
     class FakeResp:
         def __init__(self, content=b"XLSX"): self.content = content
-        def raise_for_status(self): pass
+        def raise_for_status(self): 
+            """Fake method used in tests: does nothing to simulate a successful HTTP response."""
+            pass
 
     def fake_post(url, files=None, data=None, timeout=None, **_):
         captured["url"] = url

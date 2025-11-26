@@ -21,25 +21,24 @@ st.header("Resumo do projeto")
 
 st.markdown("""
 <p class="justify">
-Este projeto propõe a aplicação de técnicas de Inteligência Artificial (IA) à análise de variantes nos genes BRCA1/BRCA2 no contexto do câncer de mama. Serão desenvolvidos dois modelos de Inteligência Artificial (IA): (i) um classificador de variantes (patogênicas, benignas ou de significado incerto) e (ii) um modelo probabilístico capaz de estimar o potencial patogênico de cada variante.
+O câncer de mama permanece um desafio de alta incidência e complexidade biológica. No contexto hereditário, alterações em BRCA1 e BRCA2 estão associadas a risco aumentado e motivam a classificação de patogenicidade de variantes nesses genes, com impacto direto em aconselhamento genético e tomada de decisão clínica.
 </p>
 
 <p class="justify">
-A base de dados será consolidada a partir do ClinVar e dbSNP, normalizada para o genoma de referência GRCh38 e enriquecida com anotações obtidas via APIs do Ensembl, bem como com informações estruturais do UniProt e recursos do projeto AlphaFold, quando pertinente.
+Este trabalho propõe um pipeline de IA para classificar a patogenicidade de variantes em BRCA1 e BRCA2 a partir de um sequenciamento genético (fasta) do paciente. As variantes são detectadas por alinhamento à referência, anotadas via Ensembl VEP e transformadas em features binárias e numéricas. O classificador é um MLP multitarefa (uma cabeça por gene) com classificação ordinal (CORAL), que modela quatro classes ordenadas por meio de logits cumulativos, respeitando a estrutura ordinal do problema. O sistema é calibrado para alto recall na classe patogênica, priorizando a redução de falsos negativos clinicamente críticos.
 </p>
 
 <p class="justify">
-As representações das variantes combinarão atributos tabulares (coordenadas, tipo e consequência, metadados de curadoria) com informações derivadas de sequência (janelas de DNA/proteína). O segundo modelo dará ênfase ao impacto funcional, considerando posição e transcrito afetados, tipo de evento (missense, nonsense, frameshift, alterações de splicing) e efeito esperado na proteína. Alterações truncantes e mutações associadas à perda de função tendem a aumentar a probabilidade prevista.
+A acurácia estrutural oferecida pela AlphaFold ampliou o acesso a modelos tridimensionais, incluindo BRCA1 e BRCA2, permitindo contextualizar variantes em regiões e domínios da proteína. Neste trabalho, essa visualização é utilizada como apoio à interpretação, enquanto a predição de patogenicidade permanece a tarefa principal.
 </p>
 
 <p class="justify">
-O desempenho dos modelos será avaliado com métricas apropriadas, incluindo a calibração probabilística, de forma a possibilitar a priorização interpretável de variantes e oferecer um fluxo reprodutível de análise, útil à pesquisa translacional em oncologia de precisão.
+Para treinamento e validação, utilizamos dados públicos; para testes ponta a ponta, o FASTA do “paciente” é sintético, derivado da sequência de referência com mutações in silico que emulam casos reais, permitindo verificar o pipeline sem expor dados clínicos.
 </p>
 
 <br>
 <br>
 """, unsafe_allow_html=True)
-
 
 st.header("Navegue pelo menu ou escolha abaixo o que deseja fazer:")
 
@@ -53,12 +52,12 @@ with c1:
     st.write("Baixe os datasets do projeto (BRCA1, BRCA2 ou ambos), com cache no servidor.")
     st.page_link("pages/datasets.py", label="Ir para Datasets", icon="➡️")
 with c2:
-    st.markdown("### 🧠 Treino")
-    st.write("Configuração e início do treinamento do modelo. (Em breve)")
-    st.page_link("pages/train_model.py", label="Ir para tela de Treino", icon="➡️")
-with c3:
     st.markdown("### 🔮 Predição")
     st.write("Envio de arquivos para predição de patogenicideade. (Em breve)")
     st.page_link("pages/predict.py", label="Ir para tela de Predição", icon="➡️")
+with c3:
+    st.markdown("### 📑 Resultados")
+    st.write("Resultados e métricas do modelo")
+    st.page_link("pages/results.py", label="Ir para tela de Resultados", icon="➡️")
 
 st.divider()

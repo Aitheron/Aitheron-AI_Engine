@@ -34,7 +34,9 @@ def test_download_ncbi_gene_summary_writes_tsv(tmp_path, monkeypatch):
         def __init__(self, data): self.data=data
         def __enter__(self): return self
         def __exit__(self, *a): pass
-        def raise_for_status(self): pass
+        def raise_for_status(self): 
+            """Fake method used in tests: does nothing to simulate a successful HTTP response."""
+            pass
         def iter_content(self, chunk_size): yield self.data.getvalue()
 
     monkeypatch.setattr(

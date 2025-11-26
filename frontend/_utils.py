@@ -10,7 +10,7 @@ def sidebar():
         st.page_link("app.py", label="Início", icon="🏠")
         st.page_link("pages/datasets.py", label="Datasets", icon="📊")
         st.page_link("pages/predict.py", label="Predição", icon="🔮")
-        st.page_link("pages/train_model.py", label="Treino (em breve)", icon="🧠")
+        st.page_link("pages/results.py", label="Resultados", icon="📑")
         st.divider()
 
 def parse_single_fasta(file_bytes: bytes):
