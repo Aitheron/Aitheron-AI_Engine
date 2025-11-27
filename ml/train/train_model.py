@@ -15,6 +15,7 @@ from sklearn.model_selection import StratifiedKFold
 from ml.train._settings import Config
 from ml.train.data_loader import load_training_csv, prepare_feature_sets, Preprocessor
 from ml.train.model import MultitaskMLP
+from ml.train.evaluation_graph import generate_evaluation_graphs
 from ml.train.metrics import (
     compute_binary_metrics,
     pick_best_threshold_by_f1,
@@ -26,7 +27,7 @@ from ml._utils import (
     unpack_class_probs_from_cumulative,
 )
 
-from ml.train.evaluation_graph import generate_evaluation_graphs
+from data_prep.prepare_training_dataset import build_training_dataset
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -344,7 +345,18 @@ def train_full_data(
 
 def main():
     cfg = Config()
-    df = load_training_csv(cfg.paths.train_csv_path)
+    train_file_path = Path(cfg.paths.train_csv_path)
+
+    if train_file_path.exists():
+        df = load_training_csv(cfg.paths.train_csv_path)
+        print(f"Loaded training dataset from {train_file_path}")
+    else:
+        print("Creating training dataset before training the model !")
+        inp = "./files/clinvar_BRCA1_BRCA2_GRCh38_merged.csv.gz"
+        df = build_training_dataset(
+            input_csv=inp,
+            output_csv=train_file_path
+        )
 
     strat = (df[cfg.cols.gene_col].astype(str) + "_" + df[cfg.cols.label_col].astype(int).astype(str))
     y_all, g_all, idx_all, used_cols, (num_cols, bin_cols, cat_cols) = prepare_feature_sets(df, cfg.cols)
