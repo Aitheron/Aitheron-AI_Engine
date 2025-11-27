@@ -14,7 +14,8 @@ teste.fasta
 */fold_*
 teste.py
 
-files/
+files/*
+!files/rfc_aitheron.pdf
 
 .coverage
 .env

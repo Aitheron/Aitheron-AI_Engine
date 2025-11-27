@@ -1,5 +1,6 @@
 import streamlit as st
 from _utils import sidebar
+import base64  # certifique-se de ter isso no topo do arquivo
 
 st.set_page_config(page_title="Aitheron", page_icon="🧬", layout="wide")
 
@@ -61,3 +62,54 @@ with c3:
     st.page_link("pages/results.py", label="Ir para tela de Resultados", icon="➡️")
 
 st.divider()
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+col_repo, col_doc = st.columns(2)
+with col_repo:
+    st.markdown("### 💻 Repositório no GitHub")
+    st.write(
+        "Acesse o código-fonte completo do Aitheron AI, "
+        "incluindo scripts de treino e pipelines."
+    )
+
+    st.link_button(
+        label="Ir para o repositório",
+        url="https://github.com/Aitheron/Aitheron-AI_Engine",
+        type="secondary",
+        icon=":material/open_in_new:",
+    )
+
+with col_doc:
+    st.markdown("### 📖 RFC - Aitheron")
+    st.write(
+        "Consulte o documento técnico (RFC) com a descrição do "
+        "pipeline, arquitetura do modelo e decisões de projeto."
+    )
+
+    rfc_path = "../files/rfc_aitheron.pdf"
+
+    with open(rfc_path, "rb") as f:
+        pdf_bytes = f.read()
+
+    btn_col1, btn_col2 = st.columns(2)
+
+    with btn_col1:
+        with st.popover("Pré-visualizar RFC", icon=":material/description:"):
+            base64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+            pdf_html = f"""
+            <iframe src="data:application/pdf;base64,{base64_pdf}"
+                    width="100%" height="600"
+                    type="application/pdf"></iframe>
+            """
+            st.markdown(pdf_html, unsafe_allow_html=True)
+
+    with btn_col2:
+        st.download_button(
+            label="Baixar RFC em PDF",
+            data=pdf_bytes,
+            file_name="aitheron_rfc.pdf",
+            mime="application/pdf",
+            type="secondary",
+            icon=":material/download:",
+        )
