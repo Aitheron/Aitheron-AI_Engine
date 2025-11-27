@@ -3,21 +3,17 @@ import json
 import joblib
 import numpy as np
 
-
 def ensure_dir(path: str):
     os.makedirs(path, exist_ok=True)
-
 
 def save_json(obj, path: str):
     ensure_dir(os.path.dirname(path))
     with open(path, "w", encoding="utf-8") as f:
         json.dump(obj, f, indent=2, ensure_ascii=False)
 
-
 def save_joblib(obj, path: str):
     ensure_dir(os.path.dirname(path))
     joblib.dump(obj, path)
-
 
 def unpack_class_probs_from_cumulative(p_cum: np.ndarray) -> np.ndarray:
     Km1 = p_cum.shape[1]
@@ -33,7 +29,6 @@ def unpack_class_probs_from_cumulative(p_cum: np.ndarray) -> np.ndarray:
     out = out / row_sum
     return out
 
-
 LABELS = {
     0: "Benigno",
     1: "Possivelmente Benigno",
@@ -41,11 +36,9 @@ LABELS = {
     3: "Patogênico",
 }
 
-
 def entropy(p: np.ndarray):
     p = np.clip(p, 1e-12, 1.0)
     return -(p * np.log(p)).sum(axis=-1)
-
 
 def pretty_line(head, idx, pvec, k):
     top1 = float(pvec.max())

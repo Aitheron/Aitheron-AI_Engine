@@ -23,8 +23,10 @@ from ml.train.metrics import (
 )
 from ml._utils import (
     save_json,
-    unpack_class_probs_from_cumulative
+    unpack_class_probs_from_cumulative,
 )
+
+from ml.train.evaluation_graph import generate_evaluation_graphs
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -218,7 +220,17 @@ def train_one_fold(cfg: Config, fold_idx: int, X_train, y_train, g_train, X_val,
 def pos_weight_for_head_full(y, g, gene_name, device):
     return torch.ones(3, dtype=torch.float32, device=device)
 
-def train_full_data(cfg: Config, X_full, y_full, g_full, init_state_dict: dict, pre_full: Preprocessor, final_epochs: int, thresholds_final: dict, outdir_final: str) -> dict:
+def train_full_data(
+    cfg: Config,
+    X_full,
+    y_full,
+    g_full,
+    init_state_dict: dict,
+    pre_full: Preprocessor,
+    final_epochs: int,
+    thresholds_final: dict,
+    final_outdir: str
+) -> dict:
     model = MultitaskMLP(
         in_dim=X_full.shape[1],
         hidden_dims=cfg.train.hidden_dims,
@@ -257,8 +269,10 @@ def train_full_data(cfg: Config, X_full, y_full, g_full, init_state_dict: dict, 
             loss0 = (l0 * m0).sum() / (m0.sum() * l0.shape[1] + eps)
             loss1 = (l1 * m1).sum() / (m1.sum() * l1.shape[1] + eps)
             loss = 0.0
-            if torch.isfinite(loss0): loss = loss + loss0
-            if torch.isfinite(loss1): loss = loss + loss1
+            if torch.isfinite(loss0):
+                loss = loss + loss0
+            if torch.isfinite(loss1):
+                loss = loss + loss1
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -266,9 +280,9 @@ def train_full_data(cfg: Config, X_full, y_full, g_full, init_state_dict: dict, 
                 epoch_loss += loss.item()
         print(f"[FULL] ep{epoch+1}/{final_epochs} loss={epoch_loss:.4f}")
 
-    os.makedirs(outdir_final, exist_ok=True)
-    torch.save(model.state_dict(), os.path.join(outdir_final, "model.pth"))
-    joblib.dump(pre_full, os.path.join(outdir_final, "preprocessor.pkl"))
+    os.makedirs(final_outdir, exist_ok=True)
+    torch.save(model.state_dict(), os.path.join(final_outdir, "model.pth"))
+    joblib.dump(pre_full, os.path.join(final_outdir, "preprocessor.pkl"))
 
     model.eval()
     with torch.no_grad():
@@ -284,25 +298,48 @@ def train_full_data(cfg: Config, X_full, y_full, g_full, init_state_dict: dict, 
     thr0 = float(thresholds_final["BRCA1"])
     thr1 = float(thresholds_final["BRCA2"])
 
-    rep = {"final_train_epochs": int(final_epochs), "thresholds": {"BRCA1": thr0, "BRCA2": thr1}}
+    rep = {
+        "final_train_epochs": int(final_epochs),
+        "thresholds": {"BRCA1": thr0, "BRCA2": thr1},
+    }
+
     y_full_patho = (y_full == 3).astype(np.int64)
     p0_patho = p0_full[:, 3]
     p1_patho = p1_full[:, 3]
-    if mask_b1.any():
-        rep["BRCA1"] = compute_binary_metrics(y_full_patho[mask_b1], p0_patho[mask_b1], thr0)
-    if mask_b2.any():
-        rep["BRCA2"] = compute_binary_metrics(y_full_patho[mask_b2], p1_patho[mask_b2], thr1)
 
-    rep_heads_final = head_reports(y_full_patho, p0_patho, p1_patho, mask_b1, mask_b2, thr0, thr1)
-    rep.update({
-        "BRCA1_confusion": rep_heads_final.get("BRCA1_confusion", {}),
-        "BRCA2_confusion": rep_heads_final.get("BRCA2_confusion", {})
-    })
+    if mask_b1.any():
+        rep["BRCA1"] = compute_binary_metrics(
+            y_full_patho[mask_b1], p0_patho[mask_b1], thr0
+        )
+    if mask_b2.any():
+        rep["BRCA2"] = compute_binary_metrics(
+            y_full_patho[mask_b2], p1_patho[mask_b2], thr1
+        )
+
+    rep_heads_final = head_reports(
+        y_full_patho, p0_patho, p1_patho, mask_b1, mask_b2, thr0, thr1
+    )
+    rep.update(
+        {
+            "BRCA1_confusion": rep_heads_final.get("BRCA1_confusion", {}),
+            "BRCA2_confusion": rep_heads_final.get("BRCA2_confusion", {}),
+        }
+    )
     print(f"[FINAL] BRCA1 Confusion: {rep['BRCA1_confusion'].get('matrix')}")
     print(f"[FINAL] BRCA2 Confusion: {rep['BRCA2_confusion'].get('matrix')}")
 
-    save_json(rep, os.path.join(outdir_final, "metrics.json"))
-    save_json(rep, os.path.join(outdir_final, "cv_report.json"))
+    print("Generating evaluation graphs...")
+    generate_evaluation_graphs(
+        final_dir=final_outdir,
+        y_full=y_full,
+        g_full=g_full,
+        p0_full=p0_full,
+        p1_full=p1_full,
+        thresholds=thresholds_final,
+    )
+
+    save_json(rep, os.path.join(final_outdir, "metrics.json"))
+    save_json(rep, os.path.join(final_outdir, "cv_report.json"))
     return rep
 
 def main():
@@ -393,7 +430,7 @@ def main():
         y_full = y_all
         g_full = g_all.to_numpy()
         init_state = torch.load(os.path.join(winner_dir, f"mlp_fold{winner_fold}.pth"), map_location=device)
-        outdir_final = os.path.join(cfg.paths.artifacts_dir, "final_model")
+        final_outdir = os.path.join(cfg.paths.artifacts_dir, "final_model_")
         final_rep = train_full_data(
             cfg=cfg,
             X_full=X_full,
@@ -403,12 +440,12 @@ def main():
             pre_full=pre_full,
             final_epochs=final_epochs,
             thresholds_final=final_thresholds,
-            outdir_final=outdir_final
+            final_outdir=final_outdir
         )
         agg["final_model"] = {
-            "path_model": os.path.join(outdir_final, "model.pth"),
-            "path_preprocessor": os.path.join(outdir_final, "preprocessor.pkl"),
-            "path_metrics": os.path.join(outdir_final, "metrics.json"),
+            "path_model": os.path.join(final_outdir, "model.pth"),
+            "path_preprocessor": os.path.join(final_outdir, "preprocessor.pkl"),
+            "path_metrics": os.path.join(final_outdir, "metrics.json"),
             "train_epochs": int(final_rep.get("final_train_epochs", final_epochs)),
             "thresholds": final_rep.get("thresholds", {}),
             "per_head": {
