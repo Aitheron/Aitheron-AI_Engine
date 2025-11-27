@@ -9,6 +9,9 @@ from starlette.responses import StreamingResponse
 
 from core.settings import ALLOWED_GENES
 from services.predict_variants_service import run_predict_variants_service
+from logger import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/ml", tags=["Classificar Variantes Genéticas"])
 
@@ -17,7 +20,11 @@ async def predict(
     gene: Literal["BRCA1", "BRCA2"] = Form(...),
     file: UploadFile = File(...),
 ):
+
+    logger.info("Fasta receveid, starting inference process !")
+
     if gene not in ALLOWED_GENES:
+        logger.error(f"Invalid gene: {gene}. Options: {ALLOWED_GENES}")
         raise HTTPException(
             status_code=422,
             detail=f"Invalid gene: {gene}. Options: {ALLOWED_GENES}"
@@ -25,9 +32,11 @@ async def predict(
 
     data = await file.read()
     if len(data) == 0:
+        logger.error("File should not be empty !")
         raise HTTPException(422, detail="File should not be empty.")
 
     if not file.filename.endswith((".fasta", ".fa", ".fna")):
+        logger.error("Invalid file extension. Please upload a FASTA file (.fasta, .fa, .fna) !")
         raise HTTPException(
             422,
             detail="Invalid file extension. Please upload a FASTA file (.fasta, .fa, .fna)"
@@ -49,6 +58,7 @@ async def predict(
             pass
 
     if not isinstance(df, pd.DataFrame):
+        logger.error("Internal error: prediction did not return a DataFrame !")
         raise HTTPException(500, detail="Internal error: prediction did not return a DataFrame.")
 
     df = df.replace([np.inf, -np.inf], np.nan)

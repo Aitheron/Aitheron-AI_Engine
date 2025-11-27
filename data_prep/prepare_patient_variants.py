@@ -10,6 +10,9 @@ from core.settings import (
     TYPE_FLAG_COLS
 )
 
+from logger import get_logger
+logger = get_logger(__name__)
+
 VEP_URL = "https://rest.ensembl.org/vep/human/region"
 HEADERS_JSON = {"Content-Type":"application/json","Accept":"application/json"}
 
@@ -134,6 +137,7 @@ def enrich_patient_variants_with_vep(
     df,
     out_csv : Optional[str] = None
 ):
+    logger.info("Enriching variants with vep !")
     base_cache={}
     vcf_variants=[]; mapping=[]
     for i,row in df.iterrows():

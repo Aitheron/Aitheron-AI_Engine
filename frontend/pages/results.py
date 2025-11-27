@@ -70,43 +70,43 @@ with col_right:
 
 with st.expander("O que cada métrica significa"):
     st.markdown(
-        """
-- **AUROC (Area Under the ROC Curve)**  
-  Mede a capacidade do modelo de separar classes ao variar o limiar de decisão.  
-  Quanto mais perto de 1, melhor o poder discriminativo.
+    """
+    - **AUROC (Area Under the ROC Curve)**  
+    Mede a capacidade do modelo de separar classes ao variar o limiar de decisão.  
+    Quanto mais perto de 1, melhor o poder discriminativo.
 
-- **AUPRC (Area Under the Precision–Recall Curve)**  
-  Foca na relação entre **Precisão** e **Recall**, especialmente útil quando a classe positiva é rara.  
-  Valores próximos de 1 indicam bom desempenho em identificar verdadeiros positivos sem muitos falsos positivos.
+    - **AUPRC (Area Under the Precision–Recall Curve)**  
+    Foca na relação entre **Precisão** e **Recall**, especialmente útil quando a classe positiva é rara.  
+    Valores próximos de 1 indicam bom desempenho em identificar verdadeiros positivos sem muitos falsos positivos.
 
-- **Acurácia**  
-  Proporção de predições corretas entre todas as amostras (TP + TN / total).  
-  Pode ser enganosa se as classes forem muito desbalanceadas.
+    - **Acurácia**  
+    Proporção de predições corretas entre todas as amostras (TP + TN / total).  
+    Pode ser enganosa se as classes forem muito desbalanceadas.
 
-- **Recall (Sensibilidade)**  
-  Entre todos os casos realmente positivos, quantos o modelo identificou como positivos (TP / TP + FN).  
-  Importante para não deixar passar variantes patogênicas.
+    - **Recall (Sensibilidade)**  
+    Entre todos os casos realmente positivos, quantos o modelo identificou como positivos (TP / TP + FN).  
+    Importante para não deixar passar variantes patogênicas.
 
-- **Precisão**  
-  Entre todos os casos que o modelo chamou de positivos, quantos realmente eram positivos (TP / TP + FP).  
-  Alta precisão significa poucos falsos positivos.
+    - **Precisão**  
+    Entre todos os casos que o modelo chamou de positivos, quantos realmente eram positivos (TP / TP + FP).  
+    Alta precisão significa poucos falsos positivos.
 
-- **F1-score**  
-  Média harmônica entre Precisão e Recall.  
-  Resume o trade-off entre os dois em um único número.
+    - **F1-score**  
+    Média harmônica entre Precisão e Recall.  
+    Resume o trade-off entre os dois em um único número.
 
-- **Balanced Accuracy**  
-  Média entre sensibilidade da classe positiva e da classe negativa.  
-  Corrige o efeito de desbalanceamento entre classes.
+    - **Balanced Accuracy**  
+    Média entre sensibilidade da classe positiva e da classe negativa.  
+    Corrige o efeito de desbalanceamento entre classes.
 
-- **MCC (Matthews Correlation Coefficient)**  
-  Métrica de correlação entre predições e rótulos verdadeiros, variando de -1 a 1.  
-  Próximo de 1 indica forte concordância; próximo de 0, aleatório.
+    - **MCC (Matthews Correlation Coefficient)**  
+    Métrica de correlação entre predições e rótulos verdadeiros, variando de -1 a 1.  
+    Próximo de 1 indica forte concordância; próximo de 0, aleatório.
 
-- **Threshold**  
-  Limiar de probabilidade usado para decidir se uma variante é considerada patogênica.  
-  Probabilidades acima do threshold são classificadas como positivas.
-"""
+    - **Threshold**  
+    Limiar de probabilidade usado para decidir se uma variante é considerada patogênica.  
+    Probabilidades acima do threshold são classificadas como positivas.
+    """
     )
 
 st.markdown("---")

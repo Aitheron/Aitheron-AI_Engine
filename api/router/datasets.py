@@ -6,12 +6,17 @@ import pandas as pd
 
 from schemas.datasets import DatasetItem
 from services.generate_dataset_service import run_generate_dataset_service
+from logger import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/datasets", tags=["Gerar Datasets"])
 
 @router.post("/download")
 def download_excel(item: DatasetItem):
+    logger.info("Preparing dataset to download !")
     if not item.genes:
+        logger.error("At least one gene must be provided !")
         raise HTTPException(status_code=400, detail="At least one gene must be provided.")
     genes_sorted = sorted(list(dict.fromkeys(item.genes)))
     kind_suffix = "training" if item.is_training_dt else "merged"
@@ -30,6 +35,7 @@ def download_excel(item: DatasetItem):
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             df.to_excel(writer, index=False, sheet_name="data")
         output.seek(0)
+        logger.info("Dataset is ready for download !")
         return StreamingResponse(
             output,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

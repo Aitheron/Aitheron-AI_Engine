@@ -8,7 +8,9 @@ from data_prep import (
 
 from services._utils import drop_cols, reorder_columns
 from ml import get_predictor
+from logger import get_logger
 
+logger = get_logger(__name__)
 
 def run_predict_variants_service(gene, file_path):
 
@@ -16,6 +18,8 @@ def run_predict_variants_service(gene, file_path):
         target_gene=gene,
         fasta_file_path=file_path
     )
+
+    logger.info(f"Detected {len(initial_df)} variants in provided fasta in {gene} gene !")
 
     with_vep_df = enrich_patient_variants_with_vep(
         df=initial_df
@@ -74,7 +78,8 @@ def run_predict_variants_service(gene, file_path):
         "Type" : "Tipo de Mutação"
     }, inplace=True)
 
-    predicted_values.to_csv("./teste.csv", index=False)
+    #predicted_values.to_csv("./teste.csv", index=False)
+    logger.info("The system has classified the variants and is returning the results to the user !")
     return predicted_values
 
 if __name__ == "__main__":

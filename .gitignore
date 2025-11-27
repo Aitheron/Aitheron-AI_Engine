@@ -17,3 +17,4 @@ teste.py
 files/
 
 .coverage
+.env

@@ -74,5 +74,6 @@ jobs:
           docker run -d --name aitheron --restart unless-stopped \
             -p 127.0.0.1:8501:8501 \
             -p 127.0.0.1:8000:8000 \
+            -e SENTRY_DSN=${{ secrets.SENTRY_DSN }} \
             ${IMAGE_URL}:${TAG}
           docker image prune -f
